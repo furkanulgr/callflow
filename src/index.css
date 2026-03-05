@@ -1,0 +1,370 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 240 20% 98%;
+        --foreground: 240 10% 10%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 10%;
+        --border: 240 10% 90%;
+        --input: 240 10% 90%;
+        --radius: 0.75rem;
+    }
+
+    * {
+        @apply border-border;
+    }
+
+    html {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+        @apply bg-background text-foreground antialiased;
+        font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    }
+}
+
+/* ─────────────────────────────────
+   CARD — same as LeadFlow
+───────────────────────────────── */
+.glass-card {
+    @apply bg-white/90 backdrop-blur-xl border border-white/30 shadow-lg rounded-2xl;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.05),
+        0 10px 15px -3px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    box-shadow:
+        0 8px 12px -2px rgba(0, 0, 0, 0.08),
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+    transform: translateY(-2px);
+}
+
+.card {
+    background: #ffffff;
+    border: 1px solid rgba(229, 231, 235, 0.6);
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ─────────────────────────────────
+   ICON BOX (dark bg with neon icon — LeadFlow style)
+───────────────────────────────── */
+.icon-box {
+    background: #0f172a;
+    /* slate-900 */
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-box-neon {
+    background: #CCFF00;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ─────────────────────────────────
+   PRIMARY BUTTON  (#CCFF00)
+───────────────────────────────── */
+.btn-primary {
+    background: #CCFF00;
+    color: #0f172a;
+    font-weight: 700;
+    border: none;
+    transition: all 0.18s ease;
+}
+
+.btn-primary:hover {
+    background: #b8f000;
+    box-shadow: 0 4px 18px rgba(204, 255, 0, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-outline {
+    background: transparent;
+    color: #1e293b;
+    font-weight: 600;
+    border: 1px solid #e5e7eb;
+    transition: all 0.18s ease;
+}
+
+.btn-outline:hover {
+    background: #f9fafb;
+}
+
+/* ─────────────────────────────────
+   INPUT (LeadFlow style)
+───────────────────────────────── */
+.input-base {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    font-size: 14px;
+    color: #1e293b;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    outline: none;
+    font-family: inherit;
+}
+
+.input-base:focus {
+    border-color: #CCFF00;
+    box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.18);
+}
+
+.input-base::placeholder {
+    color: #9ca3af;
+}
+
+/* ─────────────────────────────────
+   BADGES
+───────────────────────────────── */
+.badge-hot {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(239, 68, 68, 0.08);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.18);
+}
+
+.badge-cold {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(59, 130, 246, 0.08);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.18);
+}
+
+.badge-appointment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(16, 185, 129, 0.08);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.18);
+}
+
+.badge-missed {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(107, 114, 128, 0.06);
+    color: #6b7280;
+    border: 1px solid rgba(107, 114, 128, 0.14);
+}
+
+.badge-warm {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(204, 255, 0, 0.1);
+    color: #4d7c0f;
+    border: 1px solid rgba(204, 255, 0, 0.3);
+}
+
+.badge-purple {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(204, 255, 0, 0.1);
+    color: #4d7c0f;
+    border: 1px solid rgba(204, 255, 0, 0.3);
+}
+
+/* ─────────────────────────────────
+   TOGGLE
+───────────────────────────────── */
+.toggle-track {
+    transition: background 0.25s ease;
+}
+
+.toggle-thumb {
+    transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─────────────────────────────────
+   WAVE BARS
+───────────────────────────────── */
+@keyframes waveBar {
+
+    0%,
+    100% {
+        transform: scaleY(0.25);
+    }
+
+    50% {
+        transform: scaleY(1);
+    }
+}
+
+.wave-bar {
+    border-radius: 2px;
+    transform-origin: bottom center;
+}
+
+.wave-bar-active {
+    animation: waveBar 1s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────
+   ANIMATIONS
+───────────────────────────────── */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes countUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spin-rev {
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes slideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeInUp {
+    animation: fadeInUp 0.35s ease forwards;
+}
+
+.animate-count {
+    animation: countUp 0.6s ease-out forwards;
+}
+
+.animate-spin-slow {
+    animation: spin-slow 22s linear infinite;
+}
+
+.animate-spin-rev {
+    animation: spin-rev 32s linear infinite;
+}
+
+.animate-slideUp {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+.progress-glow {
+    box-shadow: 0 0 6px rgba(204, 255, 0, 0.5);
+}
+
+/* ─────────────────────────────────
+   SCROLLBAR (same as LeadFlow)
+───────────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
