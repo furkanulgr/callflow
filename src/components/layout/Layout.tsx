@@ -166,11 +166,11 @@ export const Layout = () => {
                         collapsed && !mobileOpen ? "justify-center" : ""
                     )}>
                         <div className="w-10 h-10 rounded-full bg-[#CCFF00] flex items-center justify-center shadow-md flex-shrink-0">
-                            <span className="font-bold text-gray-900 text-sm">F</span>
+                            <span className="font-bold text-gray-900 text-sm">G</span>
                         </div>
                         {(!collapsed || mobileOpen) && (
                             <div className="flex-1 text-left">
-                                <p className="text-sm font-semibold text-gray-900">Furkan</p>
+                                <p className="text-sm font-semibold text-gray-900">Görkem</p>
                                 <p className="text-xs text-gray-500 flex items-center gap-1">
                                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                     Premium
@@ -185,7 +185,7 @@ export const Layout = () => {
             <main className={cn(
                 "transition-all duration-300",
                 collapsed ? "md:ml-20" : "md:ml-64",
-                "p-4 md:p-6"
+                location.pathname === "/live" ? "p-0 h-screen" : "p-4 md:p-6"
             )}>
                 <Outlet />
             </main>

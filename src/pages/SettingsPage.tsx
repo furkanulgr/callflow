@@ -19,7 +19,7 @@ const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 export const SettingsPage = () => {
     const [section, setSection] = useState<Section>("ai");
     const [voice, setVoice] = useState("female-tr");
-    const [greeting, setGreeting] = useState("Merhaba, LUERA'ya hoş geldiniz. Size nasıl yardımcı olabilirim?");
+    const [greeting, setGreeting] = useState("Merhaba, VMS Digital'e hoş geldiniz. Size nasıl yardımcı olabilirim?");
     const [autoAnswer, setAutoAnswer] = useState(true);
     const [recordCalls, setRecordCalls] = useState(true);
     const [callSummary, setCallSummary] = useState(true);
@@ -49,7 +49,7 @@ export const SettingsPage = () => {
     );
 
     return (
-        <div className="min-h-screen p-6 md:p-8" style={{ background: "linear-gradient(160deg,#f5f3ff 0%,#faf9ff 40%,#f0fdf4 100%)" }}>
+        <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
             <div className="max-w-[1100px] mx-auto space-y-6">
 
                 {/* Header */}
@@ -103,12 +103,12 @@ export const SettingsPage = () => {
                                             ].map(v => (
                                                 <button key={v.id} onClick={() => setVoice(v.id)}
                                                     className={cn("p-4 rounded-2xl border text-left transition-all",
-                                                        voice === v.id ? "border-gray-200 bg-gray-900/50 shadow-sm" : "border-gray-200 hover:border-slate-300")}>
+                                                        voice === v.id ? "border-[#CCFF00] bg-[#CCFF00]/10 shadow-sm ring-1 ring-[#CCFF00]/30" : "border-gray-200 hover:border-slate-300 bg-white")}>
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <Volume2 className={cn("w-4 h-4", voice === v.id ? "text-gray-900" : "text-gray-400")} />
-                                                        <span className="text-sm font-semibold text-gray-900">{v.label}</span>
+                                                        <Volume2 className={cn("w-4 h-4", voice === v.id ? "text-[#4d7c0f]" : "text-gray-400")} />
+                                                        <span className={cn("text-sm font-semibold", voice === v.id ? "text-[#3d6209]" : "text-gray-900")}>{v.label}</span>
                                                     </div>
-                                                    <p className="text-xs text-gray-400">{v.desc}</p>
+                                                    <p className={cn("text-xs", voice === v.id ? "text-[#4d7c0f]/70" : "text-gray-400")}>{v.desc}</p>
                                                 </button>
                                             ))}
                                         </div>
@@ -216,15 +216,15 @@ export const SettingsPage = () => {
                                         <User className="w-5 h-5 text-gray-500" /> Hesap Bilgileri
                                     </h2>
 
-                                    <div className="flex items-center gap-4 p-5 rounded-2xl bg-gray-900 border border-gray-200">
+                                    <div className="flex items-center gap-4 p-5 rounded-2xl bg-slate-50 border border-slate-200">
                                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold"
                                             style={{ background: "linear-gradient(135deg,#CCFF00,#a3e635)", color: "#1a1a1a" }}>
-                                            F
+                                            G
                                         </div>
                                         <div>
-                                            <p className="font-bold text-gray-900">Furkan Ülger</p>
-                                            <p className="text-xs text-gray-500 mt-0.5">furkan@luera.com</p>
-                                            <span className="badge-purple mt-1 inline-flex">Admin</span>
+                                            <p className="font-bold text-gray-900">Görkem</p>
+                                            <p className="text-xs text-gray-500 mt-0.5">gorkem@vmsdigital.com</p>
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#CCFF00]/15 text-[#4d7c0f] border border-[#CCFF00]/30 mt-1">Admin</span>
                                         </div>
                                     </div>
 
@@ -248,7 +248,7 @@ export const SettingsPage = () => {
 
                             {/* Save */}
                             <div className="mt-8 flex justify-end">
-                                <button className="flex items-center gap-2 px-6 py-3 rounded-2xl btn-primary text-sm">
+                                <button className="flex items-center gap-2 px-6 py-3 rounded-xl btn-primary text-sm">
                                     <Save className="w-4 h-4" /> Kaydet
                                 </button>
                             </div>

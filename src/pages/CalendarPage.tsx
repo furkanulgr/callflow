@@ -27,10 +27,11 @@ function getFirstDayOfMonth(year: number, month: number) {
 
 export const CalendarPage = () => {
     const today = new Date();
-    // Defaulting to March 2026 to match mock data context
     const [current, setCurrent] = useState({ year: 2026, month: 2 });
     const [selected, setSelected] = useState<string | null>("2026-03-01");
     const [detailAppt, setDetailAppt] = useState<typeof appointments[0] | null>(null);
+    const [showNewPlan, setShowNewPlan] = useState(false);
+    const [newPlan, setNewPlan] = useState({ name: "", phone: "", date: "", time: "", note: "" });
 
     const { year, month } = current;
     const daysInMonth = getDaysInMonth(year, month);
@@ -50,13 +51,13 @@ export const CalendarPage = () => {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-shrink-0">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            <CalendarDays className="w-8 h-8 text-[#CCFF00] drop-shadow-sm" />
+                        <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2.5">
+                            <CalendarDays className="w-6 h-6 text-[#CCFF00]" />
                             Zamanlanmış Çağrılar
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1 font-medium">LUERA'nın aramak için beklediği numaralar ve randevular</p>
+                        <p className="text-sm text-gray-500 mt-1">Aramak için beklenen numaralar ve randevular</p>
                     </div>
-                    <button className="flex items-center gap-2 bg-slate-900 text-[#CCFF00] px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all w-full sm:w-auto justify-center group">
+                    <button onClick={() => setShowNewPlan(true)} className="flex items-center gap-2 bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-slate-900 transition-all w-full sm:w-auto justify-center group">
                         <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Yeni Plan Oluştur
                     </button>
                 </div>
@@ -65,7 +66,7 @@ export const CalendarPage = () => {
                 <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
 
                     {/* Left Panel: Calendar Grid */}
-                    <div className="lg:col-span-8 flex flex-col bg-slate-900 rounded-[2rem] border border-slate-800 shadow-xl overflow-hidden relative">
+                    <div className="lg:col-span-8 flex flex-col bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden relative">
                         {/* Decorative glow */}
                         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#CCFF00]/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none"></div>
 
@@ -155,7 +156,7 @@ export const CalendarPage = () => {
                     <div className="lg:col-span-4 flex flex-col gap-6 min-h-0">
 
                         {/* Selected Day Agenda */}
-                        <div className="bg-white rounded-[2rem] border border-gray-200/60 shadow-md p-6 flex flex-col flex-1 min-h-0 relative overflow-hidden">
+                        <div className="bg-white rounded-2xl border border-gray-200/60 shadow-md p-6 flex flex-col flex-1 min-h-0 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full blur-[60px] -mr-10 -mt-10 pointer-events-none"></div>
 
                             <div className="flex items-center justify-between mb-6 relative z-10">
@@ -209,7 +210,7 @@ export const CalendarPage = () => {
                         </div>
 
                         {/* Upcoming Mini List */}
-                        <div className="bg-slate-900 rounded-[2rem] p-6 shadow-xl flex-shrink-0 border border-slate-800">
+                        <div className="bg-slate-900 rounded-2xl p-6 shadow-xl flex-shrink-0 border border-slate-800">
                             <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <Clock className="w-3.5 h-3.5 text-[#CCFF00]" /> Yaklaşan Tüm Görevler
                             </h3>
@@ -237,7 +238,7 @@ export const CalendarPage = () => {
             {/* Modal Detail Overlay */}
             {detailAppt && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden ring-1 ring-white/10" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden ring-1 ring-white/10" onClick={(e) => e.stopPropagation()}>
 
                         <div className="bg-slate-900 p-6 flex flex-col items-center relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-b from-[#CCFF00]/10 to-transparent"></div>
@@ -275,6 +276,86 @@ export const CalendarPage = () => {
 
                             <button onClick={() => setDetailAppt(null)} className="w-full mt-2 flex items-center justify-center gap-2 bg-slate-900 text-[#CCFF00] py-3.5 rounded-xl font-bold text-sm shadow-md hover:shadow-lg hover:shadow-slate-900/20 active:scale-[0.98] transition-all">
                                 Kapat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Yeni Plan Modal */}
+            {showNewPlan && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowNewPlan(false)} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800">Yeni Plan Oluştur</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">Yeni bir arama planı ekleyin</p>
+                            </div>
+                            <button onClick={() => setShowNewPlan(false)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="px-6 py-5 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">İsim</label>
+                                    <input type="text" value={newPlan.name}
+                                        onChange={(e) => setNewPlan(p => ({ ...p, name: e.target.value }))}
+                                        placeholder="Müşteri adı"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Telefon</label>
+                                    <input type="tel" value={newPlan.phone}
+                                        onChange={(e) => setNewPlan(p => ({ ...p, phone: e.target.value }))}
+                                        placeholder="+90 5XX XXX XX XX"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Tarih</label>
+                                    <input type="date" value={newPlan.date}
+                                        onChange={(e) => setNewPlan(p => ({ ...p, date: e.target.value }))}
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Saat</label>
+                                    <input type="time" value={newPlan.time}
+                                        onChange={(e) => setNewPlan(p => ({ ...p, time: e.target.value }))}
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Not</label>
+                                <textarea value={newPlan.note}
+                                    onChange={(e) => setNewPlan(p => ({ ...p, note: e.target.value }))}
+                                    placeholder="Görev notu veya açıklama..."
+                                    rows={3}
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all resize-none" />
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+                            <button onClick={() => setShowNewPlan(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all">
+                                İptal
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowNewPlan(false);
+                                    setNewPlan({ name: "", phone: "", date: "", time: "", note: "" });
+                                }}
+                                disabled={!newPlan.name || !newPlan.phone || !newPlan.date || !newPlan.time}
+                                className={cn("flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all",
+                                    newPlan.name && newPlan.phone && newPlan.date && newPlan.time
+                                        ? "bg-slate-800 text-white hover:bg-slate-900 shadow-lg shadow-slate-900/10"
+                                        : "bg-slate-100 text-slate-300 cursor-not-allowed"
+                                )}>
+                                <Plus className="w-4 h-4" /> Plan Oluştur
                             </button>
                         </div>
                     </div>

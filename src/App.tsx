@@ -8,9 +8,15 @@ import { CalendarPage } from "@/pages/CalendarPage";
 import { WhatsAppPage } from "@/pages/WhatsAppPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 
+import { LiveTestPage } from "@/pages/LiveTestPage";
+
 const App = () => (
     <BrowserRouter>
         <Routes>
+            {/* Public Standalone Pages */}
+            <Route path="/test" element={<LiveTestPage />} />
+
+            {/* Authenticated Dashboard Layout */}
             <Route path="/" element={<Layout />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="campaigns" element={<CampaignsPage />} />
@@ -20,6 +26,7 @@ const App = () => (
                 <Route path="whatsapp" element={<WhatsAppPage />} />
                 <Route path="settings" element={<SettingsPage />} />
             </Route>
+            
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </BrowserRouter>
