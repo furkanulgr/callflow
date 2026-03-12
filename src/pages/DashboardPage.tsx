@@ -9,6 +9,7 @@ import {
     Flame, Snowflake, RefreshCw
 } from "lucide-react";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
+import { RETELL_AGENT_ID } from "@/utils/retell";
 
 /* ───── DATA ───── */
 const recentCalls = [
@@ -501,7 +502,7 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
     const [messages, setMessages] = useState<any[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const agentId = import.meta.env.VITE_RETELL_AGENT_ID;
+    const agentId = RETELL_AGENT_ID;
 
     useEffect(() => {
         let mounted = true;

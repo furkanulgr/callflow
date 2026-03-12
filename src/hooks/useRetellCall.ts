@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { retellClient, getWebCallToken } from "../utils/retell";
+import { retellClient, getWebCallToken, RETELL_AGENT_ID } from "../utils/retell";
 
 export type TranscriptMessage = {
     role: "agent" | "user";
@@ -11,7 +11,7 @@ export const useRetellCall = () => {
     const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
     const [latency, setLatency] = useState<number>(0);
     const [error, setError] = useState<string | null>(null);
-    const agentId = import.meta.env.VITE_RETELL_AGENT_ID;
+    const agentId = RETELL_AGENT_ID;
 
     useEffect(() => {
         // Event Listeners for Retell Client

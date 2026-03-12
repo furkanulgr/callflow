@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Mic, PhoneOff, MicOff, Sparkles, X, Power } from "lucide-react";
 import { cn } from "@/utils/cn";
-import { retellClient, getWebCallToken } from "@/utils/retell";
+import { retellClient, getWebCallToken, RETELL_AGENT_ID } from "@/utils/retell";
 
 interface Message {
     id: number;
@@ -21,8 +21,8 @@ export const LiveTestPage = () => {
     ]);
     const scrollRef = useRef<HTMLDivElement>(null);
     
-    // We will use the VITE_RETELL_AGENT_ID from env for this public test
-    const agentId = import.meta.env.VITE_RETELL_AGENT_ID;
+    // Use centralized agent ID from retell util (with fallback)
+    const agentId = RETELL_AGENT_ID;
 
     // ── RETELL SDK EVENT LISTENERS ──
     useEffect(() => {
