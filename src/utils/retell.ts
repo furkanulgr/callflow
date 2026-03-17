@@ -2,8 +2,8 @@ import { RetellWebClient } from "retell-client-js-sdk";
 
 // ── Centralized Retell Credentials ──
 // Reads from env if available, otherwise falls back to hardcoded values.
-export const RETELL_API_KEY = import.meta.env.VITE_RETELL_API_KEY || "key_8fff0f4fd2d7cf2df9b578f4987f";
-export const RETELL_AGENT_ID = import.meta.env.VITE_RETELL_AGENT_ID || "agent_e4f44ec1b0125596c91072269e";
+export const RETELL_API_KEY = (import.meta.env && import.meta.env.VITE_RETELL_API_KEY) || "key_8fff0f4fd2d7cf2df9b578f4987f";
+export const RETELL_AGENT_ID = (import.meta.env && import.meta.env.VITE_RETELL_AGENT_ID) || "agent_e4f44ec1b0125596c91072269e";
 
 export const retellClient = new RetellWebClient();
 
