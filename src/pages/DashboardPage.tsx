@@ -6,10 +6,9 @@ import {
     Radio, CheckCircle2, CalendarCheck, Users,
     Zap, Coffee, Lightbulb, Clock, Shield,
     X, Play, Pause, Volume2, MessageSquare, Bot, User, Plus,
-    Flame, Snowflake, RefreshCw
+    Flame, Snowflake, RefreshCw, Power, PhoneOff
 } from "lucide-react";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
-import { RETELL_AGENT_ID } from "@/utils/retell";
 
 /* ───── DATA ───── */
 const recentCalls = [
@@ -481,284 +480,210 @@ export const DashboardPage = () => {
                 </div>
             )}
 
-            {/* ── NEW CALL MODAL (ADD TO QUEUE) ── */}
+            {/* ── NEW CALL MODAL (LIVE TEST) ── */}
             {isNewCallModalOpen && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <LiveTestModal onClose={() => setIsNewCallModalOpen(false)} />
                 </div>
             )}
-
         </>
     );
 };
 
-// Keep existing sub-components hooks below...
-// ── NEW COMPONENT FOR THE LIVE TEST MODAL ──
+// ── LIVE TEST MODAL COMPONENT (ELEVENLABS SDK REWRITE) ──
+import { startElevenLabsConversation } from "@/utils/elevenlabs";
+import { BarVisualizer } from "@/components/ui/bar-visualizer";
 
 const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
-    const [duration, setDuration] = useState(0);
     const [status, setStatus] = useState<"ready" | "connecting" | "talking" | "ended">("ready");
     const [isCalling, setIsCalling] = useState(false);
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
-    const [messages, setMessages] = useState<any[]>([]);
+    const [messages, setMessages] = useState<{ id: number; speaker: "ai" | "user"; text: string }[]>([]);
+    const conversationRef = useRef<any>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const agentId = RETELL_AGENT_ID;
-
-    useEffect(() => {
-        let mounted = true;
-        let activeRetellClient: any = null;
-
-        import("@/utils/retell").then(({ retellClient }) => {
-            if (!mounted) return;
-            activeRetellClient = retellClient;
-            
-            const handleStart = () => { setIsCalling(true); setStatus("talking"); setDuration(0); setMessages([]); };
-            const handleEnd = () => { setIsCalling(false); setStatus("ended"); setIsAiSpeaking(false); };
-            const handleAiStart = () => setIsAiSpeaking(true);
-            const handleAiStop = () => setIsAiSpeaking(false);
-            const handleUpdate = (update: any) => {
-                 if (update.transcript) {
-                    setMessages(update.transcript.map((u: any, i: number) => ({
-                        id: i, speaker: u.role === "agent" ? "ai" : "user", text: u.content, time: formatTime(duration)
-                    })));
-                 }
-            };
-            const handleError = () => { setIsCalling(false); setStatus("ended"); };
-
-            retellClient.on("call_started", handleStart);
-            retellClient.on("call_ended", handleEnd);
-            retellClient.on("agent_start_talking", handleAiStart);
-            retellClient.on("agent_stop_talking", handleAiStop);
-            retellClient.on("update", handleUpdate);
-            retellClient.on("error", handleError);
-        });
-
-        return () => {
-            mounted = false;
-            if (activeRetellClient) {
-                // Ensure we disconnect gracefully if modal is closed
-                try {
-                    activeRetellClient.stopCall();
-                } catch(e) {}
-                activeRetellClient.removeAllListeners();
-            }
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const toggleCall = async () => {
-        try {
-            const { retellClient, getWebCallToken } = await import("@/utils/retell");
-            if (isCalling || status === "connecting") {
-                retellClient.stopCall();
-                setStatus("ended");
-            } else {
-                if (!agentId) { alert("Asistan ID'si bulunamadı."); return; }
-                setStatus("connecting");
-                setMessages([]);
-                const token = await getWebCallToken(agentId);
-                await retellClient.startCall({ accessToken: token, sampleRate: 24000 });
+        if (isCalling || status === "connecting") {
+            if (conversationRef.current) {
+                await conversationRef.current.endSession();
+                conversationRef.current = null;
             }
-        } catch (error) {
-            console.error(error);
-            setStatus("ready");
-            alert("Çağrı başlatılamadı.");
+            setStatus("ended");
+            setIsCalling(false);
+            setIsAiSpeaking(false);
+        } else {
+            try {
+                setStatus("connecting");
+                setMessages([]); // Clear history
+                const conv = await startElevenLabsConversation({
+                    onConnect: () => {
+                        setIsCalling(true);
+                        setStatus("talking");
+                    },
+                    onDisconnect: () => {
+                        setIsCalling(false);
+                        setStatus("ended");
+                        setIsAiSpeaking(false);
+                        conversationRef.current = null;
+                    },
+                    onError: (err) => {
+                        console.error(err);
+                        setIsCalling(false);
+                        setStatus("ended");
+                        alert("Hata: " + err);
+                    },
+                    onModeChange: (info) => {
+                        setIsAiSpeaking(info.mode === "speaking");
+                    },
+                    onMessage: (info) => {
+                        setMessages((prev) => [...prev, {
+                            id: Date.now() + Math.random(),
+                            speaker: info.source === "ai" ? "ai" : "user",
+                            text: info.message
+                        }]);
+                    }
+                });
+                conversationRef.current = conv;
+            } catch (error) {
+                setStatus("ready");
+            }
         }
     };
 
+    // Cleanup on unmount
     useEffect(() => {
-        if (status !== "talking") return;
-        const id = setInterval(() => setDuration(p => p + 1), 1000);
-        return () => clearInterval(id);
-    }, [status]);
+        return () => {
+            if (conversationRef.current) {
+                try {
+                    conversationRef.current.endSession();
+                } catch(e) {}
+            }
+        };
+    }, []);
 
+    // Scroll to bottom when messages change
     useEffect(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
     }, [messages]);
 
-    const formatTime = (secs: number) => `${Math.floor(secs/60).toString().padStart(2,"0")}:${(secs%60).toString().padStart(2,"0")}`;
-
     return (
-        <div className="bg-slate-950 md:rounded-[2.5rem] shadow-[0_40px_100px_rgba(0,0,0,1)] w-full h-full md:h-[calc(100vh-2rem)] md:max-w-[75rem] overflow-hidden flex flex-col ring-1 ring-white/5 relative backdrop-blur-3xl isolate" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-[#0B0F19] rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] relative w-full max-w-5xl mx-4 flex flex-col md:flex-row border border-white/10 ring-1 ring-[#CCFF00]/10 overflow-hidden h-[80vh] md:h-[600px] animate-in zoom-in-95 duration-300">
             
-            {/* ── BACKGROUND AURORA / MESH ── */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10 bg-slate-950">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-600/20 blur-[150px] rounded-full mix-blend-screen opacity-50 animate-[pulse_8s_ease-in-out_infinite]" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#CCFF00]/10 blur-[150px] rounded-full mix-blend-screen opacity-60 animate-[pulse_10s_ease-in-out_infinite_reverse]" />
-                <div className="absolute top-[30%] left-[20%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full mix-blend-screen opacity-30" />
-                {/* Subtle digital grid/noise overlay could go here */}
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPHBhdGggZD0iTTAgMGg4djhIMHoiIGZpbGw9Im5vbmUiLz4KPC9zdmc+')] opacity-20" />
-                <div className="absolute inset-0 rounded-[2.5rem] shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)] pointer-events-none"></div>
-            </div>
+            <button onClick={() => {
+                if (conversationRef.current) conversationRef.current.endSession();
+                onClose();
+            }} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-all bg-white/5 hover:bg-white/10 hover:scale-105 p-2 rounded-full z-50">
+                 <X className="w-5 h-5"/>
+            </button>
 
-            {/* ── FLOATING TOP HEADER ── */}
-            <div className="pt-8 px-8 flex justify-center z-20">
-                <div className="flex items-center justify-between bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-full px-4 py-3 w-full max-w-4xl shadow-2xl shadow-black/50 ring-1 ring-white/5">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-950 border border-white/10 text-[#CCFF00] flex items-center justify-center shadow-[inset_0_0_20px_rgba(204,255,0,0.15)] ring-1 ring-[#CCFF00]/20">
-                            <Sparkles className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h2 className="text-base font-black text-white tracking-widest uppercase">LUERA AI <span className="text-slate-500 font-medium tracking-normal ml-1">Live Test</span></h2>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <span className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium uppercase tracking-wider"><Circle className="w-2 h-2 fill-emerald-500 text-emerald-500 animate-pulse" /> {status === "ready" ? "Hazır" : status === "ended" ? "Sonlandı" : "Sistem Aktif"}</span>
-                                <span className="w-1 h-1 bg-white/20 rounded-full" />
-                                <span className="text-[10px] text-slate-500 flex items-center gap-1 font-mono"><Zap className="w-3 h-3 text-[#CCFF00]" /> 120ms</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center gap-2 bg-slate-950/50 rounded-full px-3 py-1.5 border border-white/5">
-                            <span className="text-xs text-slate-400 font-medium">Engine:</span>
-                            <span className="text-xs font-bold text-white flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-[#CCFF00]" /> Callflow Core v1.0</span>
-                        </div>
-                        <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-red-400 transition-all duration-300 hover:scale-105 border border-white/5 hover:border-red-500/30">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-            </div>
+            {/* ── LEFT SIDE: ORB & CONTROLS ── */}
+            <div className="flex-1 relative flex flex-col items-center justify-center p-8 bg-gradient-to-br from-[#0B0F19] to-slate-900 border-b md:border-b-0 md:border-r border-white/5 overflow-hidden">
+                {/* Minimal Background Glow */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#CCFF00]/5 rounded-full blur-[100px] pointer-events-none" />
 
-            {/* ── MAIN CONTENT AREA ── */}
-            <div className="flex-1 flex flex-col lg:flex-row relative z-10 px-8 pb-8 pt-4 gap-8 min-h-0">
-                
-                {/* ── CENTRAL ORB & STATUS (Left/Center Panel) ── */}
-                <div className="flex-1 flex flex-col items-center justify-center relative">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-[#CCFF00]/5 blur-[100px] rounded-full pointer-events-none transition-opacity duration-1000" style={{ opacity: isCalling ? 1 : 0.2 }} />
-                    
-                    <div className="relative w-64 h-64 flex items-center justify-center mb-12">
+                <div className="z-10 flex flex-col items-center w-full">
+                    {/* Focus Area: Bar Visualizer */}
+                    <div className="relative mb-12 flex flex-col items-center justify-center min-h-[192px] w-full">
                         {status === "ready" || status === "ended" ? (
-                            <button onClick={toggleCall} className="group relative w-36 h-36 rounded-full border border-white/10 flex items-center justify-center bg-slate-900/60 backdrop-blur-2xl shadow-2xl hover:shadow-[0_20px_60px_rgba(204,255,0,0.15)] hover:border-[#CCFF00]/40 transition-all duration-700 ease-out hover:-translate-y-2 ring-1 ring-white/5">
-                                <Play className="w-12 h-12 text-slate-500 group-hover:text-[#CCFF00] transition-colors duration-500 ml-2 drop-shadow-[0_0_15px_rgba(204,255,0,0.3)]" />
-                                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#CCFF00]/0 to-[#CCFF00]/0 group-hover:from-[#CCFF00]/10 group-hover:to-transparent transition-all duration-500" />
+                            <button
+                                onClick={toggleCall}
+                                className="group relative w-32 h-32 rounded-full border border-white/10 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm shadow-lg hover:shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:border-[#CCFF00]/50 transition-all duration-500"
+                            >
+                                <Power className="w-10 h-10 text-slate-500 group-hover:text-[#CCFF00] transition-colors" />
                             </button>
                         ) : (
-                            <div className="relative w-full h-full flex items-center justify-center group" onClick={toggleCall}>
-                                {isCalling && (
-                                    <>
-                                        <div className={cn("absolute inset-0 rounded-full border border-[#CCFF00]/50 transition-all duration-[2000ms] ease-out", isAiSpeaking ? "scale-[1.8] opacity-0" : "scale-[1.05] opacity-20")} />
-                                        <div className={cn("absolute inset-4 rounded-full border border-[#CCFF00]/70 transition-all duration-[1500ms] ease-out", isAiSpeaking ? "scale-[1.5] opacity-0 delay-150" : "scale-[1.05] opacity-30")} />
-                                        <div className={cn("absolute inset-8 rounded-full border border-[#CCFF00]/40 transition-all duration-[1000ms] ease-out", isAiSpeaking ? "scale-[1.2] opacity-0 delay-300" : "scale-[1.05] opacity-40")} />
-                                        <div className={cn("absolute inset-0 bg-[#CCFF00]/20 rounded-full blur-3xl transition-opacity duration-700 delay-100", isAiSpeaking ? "opacity-100 scale-125" : "opacity-0 scale-100")} />
-                                    </>
-                                )}
-                                <div className={cn("relative z-10 w-40 h-40 rounded-full border shadow-2xl flex items-center justify-center transition-all duration-700 ease-out ring-2 cursor-pointer overflow-hidden", status === "connecting" ? "animate-pulse bg-slate-800 border-white/20 ring-white/5" : isAiSpeaking ? "scale-110 shadow-[0_20px_80px_rgba(204,255,0,0.5)] border-[#CCFF00]/60 bg-slate-950 ring-[#CCFF00]/20" : "bg-slate-900 border-[#CCFF00]/20 ring-white/5 shadow-[0_10px_50px_rgba(0,0,0,0.8)] hover:scale-105")}>
-                                    
-                                    {/* Default State: Mic Icon */}
-                                    <div className={cn("absolute inset-0 flex items-center justify-center transition-all duration-500", isCalling ? "group-hover:opacity-0 group-hover:scale-75" : "opacity-100")}>
-                                        <Mic className={cn("w-12 h-12 transition-all duration-500", isAiSpeaking ? "text-[#CCFF00] drop-shadow-[0_0_15px_rgba(204,255,0,0.8)] scale-110" : "text-[#CCFF00] opacity-80 scale-100")} />
-                                    </div>
-                                    
-                                    {/* Hover State (for ending call): Phone Icon */}
-                                    {isCalling && (
-                                        <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 scale-125 group-hover:scale-100 bg-gradient-to-br from-red-500/20 to-red-900/40 border-2 border-red-500/80 backdrop-blur-xl flex items-center justify-center transition-all duration-500 ease-out shadow-[inset_0_0_30px_rgba(239,68,68,0.5)]">
-                                            <Phone className="w-12 h-12 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] rotate-[135deg]" />
-                                        </div>
-                                    )}
-                                </div>
+                            <div className="flex flex-col items-center justify-center w-full cursor-pointer" onClick={toggleCall}>
+                                <BarVisualizer 
+                                    state={status === "connecting" ? "connecting" : isAiSpeaking ? "speaking" : "listening"}
+                                    barCount={28}
+                                    minHeight={15}
+                                    maxHeight={140}
+                                    className="h-40 w-full max-w-[280px]"
+                                />
                             </div>
-
                         )}
                     </div>
-                    
-                    <div className="text-center flex flex-col items-center">
-                        <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5 backdrop-blur-md mb-4 flex items-center gap-2">
-                             <Radio className={cn("w-3.5 h-3.5", isCalling ? "text-red-500 animate-pulse" : "text-slate-500")} /> 
-                             <span className="text-[10px] font-bold tracking-widest uppercase text-slate-300">{isCalling ? "Live Stream" : "Disconnected"}</span>
-                        </div>
-                        <h3 className="text-3xl font-black text-white tracking-tight drop-shadow-md">{status === "ready" ? "Bağlanmaya Hazır" : status === "connecting" ? "Bağlanıyor..." : status === "talking" ? (isAiSpeaking ? "AI Konuşuyor" : "Dinleniyor...") : "Çağrı Sonlandı"}</h3>
-                        <p className="text-sm text-slate-400 mt-3 max-w-[280px] font-medium leading-relaxed">{status === "ready" ? "Deneyimi başlatmak için simgeye dokunun." : "Sistem ortam seslerini dinliyor ve anlamlandırıyor."}</p>
+
+                    <div className="text-center">
+                        <h3 className="text-2xl font-bold text-white tracking-tight mb-2">LUERA Sesli Asistan</h3>
+                        <p className="text-sm text-slate-400 font-medium">
+                            {status === "ready" ? "Görüşmeyi başlatmak için dokunun" : 
+                             status === "connecting" ? "Bağlantı kuruluyor..." : 
+                             status === "talking" ? (isAiSpeaking ? "Size yanıt veriyor..." : "Sizi dinliyor, konuşabilirsiniz...") : "Görüşme sonlandırıldı."}
+                        </p>
                     </div>
 
-                    {/* Sub-controls */}
-                    <div className="absolute bottom-4 flex items-center justify-center w-full gap-6">
-                        <button disabled={!isCalling} className="w-14 h-14 rounded-full bg-slate-900/80 backdrop-blur-xl border border-white/5 hover:bg-white/10 hover:border-white/10 text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-xl disabled:opacity-30 disabled:hover:translate-y-0 disabled:hover:shadow-none ring-1 ring-white/5">
-                            <MicOff className="w-5 h-5" />
-                        </button>
+                    {isCalling && (
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                            <button 
+                                onClick={toggleCall}
+                                className="w-16 h-16 rounded-full flex items-center justify-center text-white bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)] transition-all"
+                            >
+                                <PhoneOff className="w-6 h-6" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── RIGHT SIDE: TRANSCRIPT ── */}
+            <div className="flex-[1.2] flex flex-col bg-[#0B0F19] relative max-h-[50vh] md:max-h-full">
+                
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-white/5 flex items-center gap-3 bg-slate-900/20 shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#CCFF00]/10 flex items-center justify-center text-[#CCFF00]">
+                        <MessageSquare className="w-4 h-4" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-white tracking-wide">Canlı Transkript</h4>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Gerçek Zamanlı Döküm</p>
                     </div>
                 </div>
-
-                {/* ── FLOATING TRANSCRIPT PANEL (Right Side) ── */}
-                <div className="w-full lg:w-[480px] flex flex-col bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-2xl relative overflow-hidden ring-1 ring-white/5 isolate">
-                    
-                    {/* Panel Header */}
-                    <div className="w-full flex justify-between items-center px-6 py-5 border-b border-white/5 relative z-20 bg-gradient-to-b from-slate-900/80 to-transparent">
-                        <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4 text-[#CCFF00]" /> Canlı Transkript
-                        </h3>
-                        <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                            <span className="text-xs font-mono font-bold text-white tracking-widest">{formatTime(duration)}</span>
+                
+                {/* Messages */}
+                <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar scroll-smooth">
+                    {messages.length === 0 && status !== "talking" && (
+                        <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
+                            <Bot className="w-12 h-12 text-slate-600 mb-4" />
+                            <p className="text-sm font-medium text-slate-400 max-w-[200px]">
+                                Konuşma başladığında dökümler temiz ve şık bir şekilde burada görünecek.
+                            </p>
                         </div>
-                    </div>
-
-                    {/* Chat Area */}
-                    <div ref={scrollRef} className="flex-1 w-full overflow-y-auto px-6 py-6 space-y-8 custom-scrollbar relative z-20">
-                        {messages.length === 0 && !isCalling && (
-                            <div className="h-full w-full flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-1000">
-                                <div className="relative mb-8 group">
-                                    <div className="absolute inset-0 bg-[#CCFF00]/10 rounded-full blur-2xl group-hover:bg-[#CCFF00]/20 transition-all duration-700" />
-                                    <div className="w-20 h-20 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center shadow-2xl relative z-10 hover:scale-105 hover:-translate-y-1 transition-all duration-500 ring-1 ring-white/5">
-                                        <Bot className="w-10 h-10 text-slate-400 group-hover:text-[#CCFF00] transition-colors duration-500" />
-                                    </div>
-                                    <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-slate-950 rounded-full border border-white/10 flex items-center justify-center z-20">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                    </div>
-                                </div>
-                                <h4 className="text-xl font-black text-white tracking-tight mb-2">Sistem Çevrimiçi</h4>
-                                <p className="text-sm font-medium text-slate-400 leading-relaxed max-w-[280px]">
-                                    Canlı test sürecini başlatmak için merkezi simgeye dokunun ve konuşmaya başlayın.
-                                </p>
-                                
-                                <div className="w-full mt-10 pt-8 border-t border-white/5 flex flex-col gap-3">
-                                    <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl border border-white/5 transition-colors hover:bg-white/10">
-                                        <Zap className="w-4 h-4 text-[#CCFF00] shrink-0" />
-                                        <div className="text-left">
-                                            <p className="text-xs font-bold text-slate-200">Gerçek Zamanlı İşleme</p>
-                                            <p className="text-[10px] text-slate-500 mt-0.5">&lt; 150ms ses gecikme süresi</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl border border-white/5 transition-colors hover:bg-white/10">
-                                        <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
-                                        <div className="text-left">
-                                            <p className="text-xs font-bold text-slate-200">Uçtan Uca Güvenlik</p>
-                                            <p className="text-[10px] text-slate-500 mt-0.5">TLS şifrelemeli soket bağlantısı</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {messages.map((msg, idx) => {
-                            const isAI = msg.speaker === "ai";
+                    )}
+                    
+                    {messages.map((msg) => {
+                        const isAI = msg.speaker === "ai";
+                        if (isAI) {
                             return (
-                                <div key={idx} className={cn("flex flex-col gap-2 w-full animate-in fade-in slide-in-from-bottom-4 duration-500", isAI ? "items-start" : "items-end")}>
-                                    <span className={cn("text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 opacity-80", isAI ? "ml-1 text-slate-400" : "mr-1 text-[#CCFF00]")}>
-                                        {isAI ? "LUERA AI" : "SİZ"}
-                                    </span>
-                                    <div className={cn("px-5 py-3.5 text-sm leading-relaxed max-w-[85%] backdrop-blur-md shadow-2xl", isAI ? "bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm text-slate-200" : "bg-gradient-to-br from-[#CCFF00] to-[#b3ff00] text-slate-950 font-semibold rounded-2xl rounded-tr-sm")}>
+                                <div key={msg.id} className="flex w-full items-start gap-4 animate-in fade-in slide-in-from-bottom-2">
+                                    {/* Miniature Orb Avatar for AI */}
+                                    <div className="w-9 h-9 shrink-0 rounded-full border border-white/10 bg-slate-900 flex items-center justify-center overflow-hidden relative shadow-[0_0_15px_rgba(204,255,0,0.1)] mt-1">
+                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#CCFF00]/40 via-lime-500/10 to-transparent animate-spin-slow mix-blend-screen" />
+                                        <Bot className="w-4 h-4 text-[#CCFF00]/80 relative z-10" />
+                                    </div>
+                                    {/* Clean Text Response (No Bubble) */}
+                                    <div className="text-slate-200 text-[15px] leading-relaxed pt-2 w-full font-medium">
                                         {msg.text}
                                     </div>
                                 </div>
                             );
-                        })}
-                        
-                        {isCalling && isAiSpeaking && (
-                            <div className="flex flex-col gap-2 items-start pl-1 pt-4 animate-in fade-in duration-300">
-                                <span className="text-[10px] font-bold text-[#CCFF00] uppercase tracking-widest flex items-center gap-2">
-                                    <div className="flex gap-1">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#CCFF00] animate-bounce" style={{ animationDelay: '0ms' }} />
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#CCFF00] animate-bounce" style={{ animationDelay: '150ms' }} />
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#CCFF00] animate-bounce" style={{ animationDelay: '300ms' }} />
+                        } else {
+                            return (
+                                <div key={msg.id} className="flex w-full justify-end animate-in fade-in slide-in-from-bottom-2">
+                                    {/* Minimalist User Input Bubble */}
+                                    <div className="bg-slate-800 text-slate-100 px-5 py-3 rounded-2xl rounded-tr-sm max-w-[85%] text-[15px] shadow-sm border border-white/5 leading-relaxed">
+                                        {msg.text}
                                     </div>
-                                    <span className="opacity-80">Yanıtlıyor...</span>
-                                </span>
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            );
+                        }
+                    })}
                 </div>
+
             </div>
+            
         </div>
     );
 };

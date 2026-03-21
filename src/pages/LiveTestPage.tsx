@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Mic, PhoneOff, MicOff, Sparkles, X, Power } from "lucide-react";
 import { cn } from "@/utils/cn";
-import { retellClient, getWebCallToken, RETELL_AGENT_ID } from "@/utils/retell";
+import { startElevenLabsConversation, ELEVENLABS_AGENT_ID } from "@/utils/elevenlabs";
 
 interface Message {
     id: number;
@@ -17,86 +17,65 @@ export const LiveTestPage = () => {
     const [isCalling, setIsCalling] = useState(false);
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
-        { id: -1, speaker: "ai", text: "Merhaba! Ben LUERA, size nasıl yardımcı olabilirim? Herhangi bir kampanya oluşturmak ister misiniz?", time: "00:00" }
+        { id: -1, speaker: "ai", text: "Merhaba! Sistem bağlantısı hazır. Lütfen bağlan butonuna basarak demoyu başlatın.", time: "00:00" }
     ]);
     const scrollRef = useRef<HTMLDivElement>(null);
-    
-    // Use centralized agent ID from retell util (with fallback)
-    const agentId = RETELL_AGENT_ID;
-
-    // ── RETELL SDK EVENT LISTENERS ──
-    useEffect(() => {
-        retellClient.on("call_started", () => {
-            console.log("Call started");
-            setIsCalling(true);
-            setStatus("talking");
-            setDuration(0); // Reset timer
-            // Clear placeholder messages on real connect
-            setMessages([]); 
-        });
-
-        retellClient.on("call_ended", () => {
-            console.log("Call ended");
-            setIsCalling(false);
-            setStatus("ended");
-            setIsAiSpeaking(false);
-        });
-
-        retellClient.on("agent_start_talking", () => setIsAiSpeaking(true));
-        retellClient.on("agent_stop_talking", () => setIsAiSpeaking(false));
-
-        retellClient.on("update", (update: any) => {
-             if (update.transcript) {
-                const newMessages = update.transcript.map((utterance: any, index: number) => ({
-                    id: index,
-                    speaker: utterance.role === "agent" ? "ai" : "user",
-                    text: utterance.content,
-                    time: formatTime(duration) // Keep rough time based on current duration
-                }));
-                // Only update if there is a change to avoid unnecessary re-renders
-                setMessages(newMessages);
-             }
-        });
-
-        retellClient.on("error", (error: any) => {
-            console.error("Retell error:", error);
-            setIsCalling(false);
-            setStatus("ended");
-        });
-
-        return () => {
-            retellClient.off("call_started");
-            retellClient.off("call_ended");
-            retellClient.off("agent_start_talking");
-            retellClient.off("agent_stop_talking");
-            retellClient.off("update");
-            retellClient.off("error");
-            if (isCalling) {
-                retellClient.stopCall(); 
-            }
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    const conversationRef = useRef<any>(null);
 
     // ── ACTIONS ──
     const toggleCall = async () => {
         if (isCalling || status === "connecting") {
-            retellClient.stopCall();
+            if (conversationRef.current) {
+                await conversationRef.current.endSession();
+                conversationRef.current = null;
+            }
             setStatus("ended");
+            setIsCalling(false);
+            setIsAiSpeaking(false);
         } else {
             try {
-                if (!agentId) {
+                if (!ELEVENLABS_AGENT_ID) {
                     alert("Asistan ID'si bulunamadı (.env kontrol edin).");
                     return;
                 }
                 setStatus("connecting");
                 setMessages([]);
-                const token = await getWebCallToken(agentId);
-                
-                await retellClient.startCall({
-                    accessToken: token,
-                    sampleRate: 24000
+
+                const conv = await startElevenLabsConversation({
+                    onConnect: () => {
+                        console.log("ElevenLabs Call started");
+                        setIsCalling(true);
+                        setStatus("talking");
+                        setDuration(0);
+                        setMessages([]); // Clear placeholder
+                    },
+                    onDisconnect: () => {
+                        console.log("ElevenLabs Call ended");
+                        setIsCalling(false);
+                        setStatus("ended");
+                        setIsAiSpeaking(false);
+                        conversationRef.current = null;
+                    },
+                    onError: (err) => {
+                        console.error("ElevenLabs error:", err);
+                        setIsCalling(false);
+                        setStatus("ended");
+                        alert("Hata: " + err);
+                    },
+                    onModeChange: (info) => {
+                        setIsAiSpeaking(info.mode === "speaking");
+                    },
+                    onMessage: (info) => {
+                        setMessages(prev => [...prev, {
+                            id: Date.now(),
+                            speaker: info.source === "ai" ? "ai" : "user",
+                            text: info.message,
+                            time: formatTime(duration)
+                        }]);
+                    }
                 });
+
+                conversationRef.current = conv;
             } catch (error) {
                 console.error("Failed to start call:", error);
                 setStatus("ready");
@@ -104,6 +83,15 @@ export const LiveTestPage = () => {
             }
         }
     };
+
+    // ── CLEANUP ON UNMOUNT ──
+    useEffect(() => {
+        return () => {
+            if (conversationRef.current) {
+                conversationRef.current.endSession();
+            }
+        };
+    }, []);
 
     // ── TIMER & SCROLL ──
     useEffect(() => {
@@ -272,7 +260,7 @@ export const LiveTestPage = () => {
                                 <div className="flex flex-col items-start pt-2">
                                     <span className="text-[10px] font-bold tracking-wider text-[#CCFF00] mb-2 uppercase flex items-center gap-1.5">
                                         <div className="w-1.5 h-1.5 bg-[#CCFF00] rounded-full animate-pulse" />
-                                        LUERA AI YAZIYOR...
+                                        LUERA AI YAZIYOR / KONUŞUYOR...
                                     </span>
                                 </div>
                             )}
@@ -285,10 +273,10 @@ export const LiveTestPage = () => {
                              <div className="flex items-center justify-center p-1 bg-emerald-50 rounded text-emerald-600">
                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                              </div>
-                             <span>Gecikme: <span className="text-emerald-600 font-bold">120ms</span></span> {/* Hardcoded for demo/looks */}
+                             <span>Gecikme: <span className="text-emerald-600 font-bold">~120ms</span></span> {/* Hardcoded for demo/looks */}
                         </div>
                         <div className="text-[11px] font-semibold text-slate-400">
-                            Model: <span className="text-slate-700">Claude 3.5 Sonnet</span>
+                            Model: <span className="text-slate-700">ElevenLabs AI</span>
                         </div>
                     </div>
                 </div>
