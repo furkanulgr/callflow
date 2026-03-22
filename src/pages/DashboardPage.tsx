@@ -147,7 +147,7 @@ export const DashboardPage = () => {
                         <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6">LUERA</p>
                         <div>
                             <h3 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-1.5 mb-1">
-                                {greeting}, Görkem
+                                {greeting}, Gökhan
                             </h3>
                             <p className="text-xs font-medium text-gray-400">AI asistanınız aktif çalışıyor</p>
                         </div>

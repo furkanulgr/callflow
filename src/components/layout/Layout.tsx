@@ -170,7 +170,7 @@ export const Layout = () => {
                         </div>
                         {(!collapsed || mobileOpen) && (
                             <div className="flex-1 text-left">
-                                <p className="text-sm font-semibold text-gray-900">Görkem</p>
+                                <p className="text-sm font-semibold text-gray-900">Gökhan</p>
                                 <p className="text-xs text-gray-500 flex items-center gap-1">
                                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                     Premium

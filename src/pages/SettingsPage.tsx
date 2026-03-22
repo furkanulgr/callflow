@@ -222,7 +222,7 @@ export const SettingsPage = () => {
                                             G
                                         </div>
                                         <div>
-                                            <p className="font-bold text-gray-900">Görkem</p>
+                                            <p className="font-bold text-gray-900">Gökhan</p>
                                             <p className="text-xs text-gray-500 mt-0.5">gorkem@vmsdigital.com</p>
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#CCFF00]/15 text-[#4d7c0f] border border-[#CCFF00]/30 mt-1">Admin</span>
                                         </div>
