@@ -12,18 +12,18 @@ import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
 
 /* ───── DATA ───── */
 const recentCalls = [
-    { id: 1, name: "Ahmet Yılmaz", phone: "+90 532 111 22 33", type: "incoming" as const, status: "answered" as const, tag: "hot" as const, duration: 245, time: new Date(Date.now() - 300_000), summary: "Randevu talebi — 15 Mart'a planlandı. Ürün demosu istedi." },
-    { id: 2, name: "Elif Demir", phone: "+90 533 222 33 44", type: "outgoing" as const, status: "answered" as const, tag: "warm" as const, duration: 180, time: new Date(Date.now() - 1_200_000), summary: "Kurumsal paket fiyatı iletildi, cuma tekrar arayacak." },
-    { id: 3, name: "Bilinmeyen", phone: "+90 534 333 44 55", type: "incoming" as const, status: "missed" as const, tag: "cold" as const, duration: 0, time: new Date(Date.now() - 3_600_000), summary: "Cevapsız — otomatik geri arama kuyruğuna alındı." },
-    { id: 4, name: "Mehmet Kaya", phone: "+90 535 444 55 66", type: "outgoing" as const, status: "answered" as const, tag: "hot" as const, duration: 320, time: new Date(Date.now() - 7_200_000), summary: "Ürün tanıtımı tamamlandı, satın alma kararı bekleniyor." },
-    { id: 5, name: "Ayşe Çelik", phone: "+90 536 555 66 77", type: "incoming" as const, status: "answered" as const, tag: "cold" as const, duration: 95, time: new Date(Date.now() - 14_400_000), summary: "Şikayet kaydı oluşturuldu, teknik ekibe iletildi." },
+    { id: 1, name: "Ahmet Yılmaz (TechCorp)", phone: "+90 532 111 22 33", type: "incoming" as const, status: "answered" as const, tag: "hot" as const, duration: 245, time: new Date(Date.now() - 300_000), summary: "Randevu talebi onaylandı. Yıllık 50.000$ Enterprise paketi ile ilgileniyor." },
+    { id: 2, name: "Elif Demir (Vanguard AI)", phone: "+90 533 222 33 44", type: "outgoing" as const, status: "answered" as const, tag: "warm" as const, duration: 180, time: new Date(Date.now() - 1_200_000), summary: "API dökümanları iletildi, teknik ekip değerlendirip cuma tekrar aranacak." },
+    { id: 3, name: "Bilinmeyen Numaralar", phone: "+90 534 333 44 55", type: "incoming" as const, status: "missed" as const, tag: "cold" as const, duration: 0, time: new Date(Date.now() - 3_600_000), summary: "Cevapsız — Luera tarafından otomatik ikinci arama kuyruğuna alındı." },
+    { id: 4, name: "Mehmet Kaya (Global Lojistik)", phone: "+90 535 444 55 66", type: "outgoing" as const, status: "answered" as const, tag: "hot" as const, duration: 320, time: new Date(Date.now() - 7_200_000), summary: "Otomasyon demosu sunuldu. Yönetim kurulu onayı bekleniyor, kapanış ihtimali %80." },
+    { id: 5, name: "Ayşe Çelik (Nexus Finans)", phone: "+90 536 555 66 77", type: "incoming" as const, status: "answered" as const, tag: "cold" as const, duration: 95, time: new Date(Date.now() - 14_400_000), summary: "Entegrasyon süreci hak. bilgi alındı, ilgili dökümanlar mail olarak gönderildi." },
 ];
 
 const INITIAL_CALL_QUEUE = [
-    { id: 101, name: "Caner Yılmaz", phone: "+90 541 111 22 33", scheduledFor: new Date(Date.now() + 5 * 60_000), reason: "Daha sonra ara denildi (Dün)" },
-    { id: 102, name: "Zeynep Arslan", phone: "+90 542 222 33 44", scheduledFor: new Date(Date.now() + 25 * 60_000), reason: "Randevu teyidi" },
-    { id: 103, name: "Burak Kaya", phone: "+90 543 333 44 55", scheduledFor: new Date(Date.now() + 60 * 60_000), reason: "Yeni liste taraması" },
-    { id: 104, name: "Elif Demir", phone: "+90 544 444 55 66", scheduledFor: new Date(Date.now() + 120 * 60_000), reason: "Ulaşılamadı (2. deneme)" },
+    { id: 101, name: "Caner Yılmaz (CloudFlex)", phone: "+90 541 111 22 33", scheduledFor: new Date(Date.now() + 5 * 60_000), reason: "Fiyatlandırma pazarlığı görüşülecek (Sıcak Lead)" },
+    { id: 102, name: "Zeynep Arslan (HyperTech)", phone: "+90 542 222 33 44", scheduledFor: new Date(Date.now() + 25 * 60_000), reason: "Randevu saati teyidi ve ön bilgi alımı" },
+    { id: 103, name: "Burak Kaya (Innovia)", phone: "+90 543 333 44 55", scheduledFor: new Date(Date.now() + 60 * 60_000), reason: "Yeni çeyrek bütçe planlaması kapsamında araştırma" },
+    { id: 104, name: "Elif Demir (Startup Co)", phone: "+90 544 444 55 66", scheduledFor: new Date(Date.now() + 120 * 60_000), reason: "Ulaşılamadı (Otonom 2. deneme yapılacak)" },
 ];
 
 const performances = [
@@ -104,7 +104,33 @@ export const DashboardPage = () => {
     const [selectedCall, setSelectedCall] = useState<any | null>(null);
     const [localCallQueue, setLocalCallQueue] = useState(INITIAL_CALL_QUEUE);
     const [isNewCallModalOpen, setIsNewCallModalOpen] = useState(false);
+    const [isDirectCallModalOpen, setIsDirectCallModalOpen] = useState(false);
+    const [isCallingNow, setIsCallingNow] = useState(false);
     const [newCallForm, setNewCallForm] = useState({ name: "", phone: "", reason: "" });
+
+    const handleQuickCall = async () => {
+        try {
+            setIsCallingNow(true);
+            const response = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound-call', {
+                method: 'POST',
+                headers: {
+                    'xi-api-key': 'sk_bc8170ba57513f945e680076d3d7888b7660400643b1dd9d',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    to_number: '+905468158380',
+                    agent_id: 'agent_2201kn09ms06fykt6mmdsythacwh',
+                    agent_phone_number_id: 'phnum_7301kn0bmy1efsfakqa4a5jb6dw5'
+                })
+            });
+            if (response.ok) alert("🤖 Otonom Arama Başlatıldı! Lütfen telefonu açınız.");
+            else alert("Hata: " + await response.text());
+        } catch(e: any) {
+            alert("Arama hatası: " + e.message);
+        } finally {
+            setIsCallingNow(false);
+        }
+    };
 
     const handleAddNewCall = (e: React.FormEvent) => {
         e.preventDefault();
@@ -171,33 +197,41 @@ export const DashboardPage = () => {
                         </div>
                     </div>
 
-                    {/* Card 3: Test Button */}
-                    <button
-                        onClick={() => setIsNewCallModalOpen(true)}
-                        className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-lg shadow-slate-900/20 relative overflow-hidden flex flex-col justify-between min-h-[140px] group hover:scale-[1.02] hover:shadow-xl hover:shadow-[#CCFF00]/10 transition-all duration-300 text-left focus:outline-none focus:ring-2 focus:ring-[#CCFF00]"
-                    >
+                    {/* Card 3: Demo Actions */}
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-lg shadow-slate-900/20 relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-300 text-left">
                         {/* Glow Effect */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-[#CCFF00]/20 transition-all duration-500 pointer-events-none"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
 
-                        <div className="absolute top-4 right-4 flex flex-col items-center gap-1.5">
-                            <div className="flex gap-1 group-hover:opacity-0 transition-opacity duration-300 absolute top-0 right-12">
-                                <div className="w-1 h-1 rounded-full bg-slate-700"></div>
-                                <div className="w-4 h-1 rounded-full bg-[#CCFF00] shadow-[0_0_5px_rgba(204,255,0,0.5)]"></div>
-                            </div>
-                            <div className="w-10 h-10 rounded-xl bg-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.4)] flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                                <Play className="w-5 h-5 text-slate-900 fill-slate-900 ml-0.5" />
+                        <div className="flex justify-between items-start mb-2 relative z-10">
+                            <p className="text-[11px] font-bold text-[#CCFF00] tracking-widest uppercase flex items-center gap-1.5 mt-1">
+                                <Sparkles className="w-3.5 h-3.5" /> CANLI DEMO
+                            </p>
+                            <div className="w-8 h-8 rounded-lg bg-[#CCFF00]/10 flex items-center justify-center">
+                                <Bot className="w-4 h-4 text-[#CCFF00]" />
                             </div>
                         </div>
 
-                        <p className="text-[11px] font-bold text-[#CCFF00] tracking-widest uppercase mb-6 flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5" /> DEMO
-                        </p>
-
-                        <div className="relative z-10">
-                            <h3 className="text-xl font-bold text-white tracking-tight mb-1">Test Araması Başlat</h3>
-                            <p className="text-xs font-medium text-slate-400 group-hover:text-slate-300 transition-colors">AI asistanı hemen test edin</p>
+                        <div className="relative z-10 flex gap-2 mt-auto">
+                            <button
+                                onClick={() => setIsNewCallModalOpen(true)}
+                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-2 px-2 flex flex-col items-center justify-center gap-1 transition-colors"
+                            >
+                                <Mic className="w-4 h-4 text-white" />
+                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Tarayıcı</span>
+                            </button>
+                            
+                            <button
+                                onClick={handleQuickCall}
+                                disabled={isCallingNow}
+                                className="flex-1 bg-[#CCFF00] hover:bg-[#bbf000] border border-[#aadd00] rounded-xl py-2 px-2 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                            >
+                                <Phone className="w-4 h-4 text-slate-900" />
+                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-wider">
+                                    {isCallingNow ? "Aranıyor..." : "Telefon"}
+                                </span>
+                            </button>
                         </div>
-                    </button>
+                    </div>
 
                     {/* Card 4: Appointments */}
                     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[140px]">
@@ -262,6 +296,7 @@ export const DashboardPage = () => {
                                                 Bekleyen Kuyruk
                                             </button>
                                         </div>
+
 
                                         <button
                                             onClick={() => setIsNewCallModalOpen(true)}
@@ -484,6 +519,13 @@ export const DashboardPage = () => {
             {isNewCallModalOpen && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <LiveTestModal onClose={() => setIsNewCallModalOpen(false)} />
+                </div>
+            )}
+
+            {/* ── DIRECT OUTBOUND CALL MODAL ── */}
+            {isDirectCallModalOpen && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <DirectCallModal onClose={() => setIsDirectCallModalOpen(false)} />
                 </div>
             )}
         </>

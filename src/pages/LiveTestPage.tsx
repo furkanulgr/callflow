@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Mic, PhoneOff, MicOff, Sparkles, X, Power } from "lucide-react";
+import { Mic, PhoneOff, MicOff, Sparkles, X, Activity, Volume2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { startElevenLabsConversation, ELEVENLABS_AGENT_ID } from "@/utils/elevenlabs";
 
@@ -17,7 +17,7 @@ export const LiveTestPage = () => {
     const [isCalling, setIsCalling] = useState(false);
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
-        { id: -1, speaker: "ai", text: "Merhaba! Sistem bağlantısı hazır. Lütfen bağlan butonuna basarak demoyu başlatın.", time: "00:00" }
+        { id: -1, speaker: "ai", text: "Merhaba! Sistem bağlantısı hazır. Lütfen çağrıyı başlatarak demoya girin.", time: "00:00" }
     ]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const conversationRef = useRef<any>(null);
@@ -115,141 +115,181 @@ export const LiveTestPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8F9FB] flex flex-col font-sans p-4 md:p-8">
+        <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans p-4 md:p-6 lg:p-8">
             {/* ── HEADER ── */}
-            <div className="max-w-7xl mx-auto w-full mb-8">
-                <div className="bg-white rounded-2xl p-4 md:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#0F172A] flex items-center justify-center shadow-lg">
-                            <Sparkles className="w-6 h-6 text-[#CCFF00]" />
+            <div className="max-w-[1400px] w-full mx-auto mb-6 lg:mb-8">
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-4 lg:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center shadow-lg shadow-slate-900/20 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
+                            <Sparkles className="w-7 h-7 text-[#CCFF00]" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold text-slate-900">Canlı AI Testi</h1>
-                            <p className="text-sm text-slate-500 font-medium">Sisteminizin yapay zekasını gerçek zamanlı olarak test edin.</p>
+                            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">
+                                Canlı AI Testi
+                            </h1>
+                            <p className="text-sm text-slate-500 font-medium tracking-wide mt-1">
+                                Luera AI sesli asistanının tepkiselliğini deneyimleyin.
+                            </p>
                         </div>
                     </div>
-                    {/* Close/Exit Button for the test panel */}
+                    {/* Exit Button */}
                     <button 
                         onClick={() => window.location.href = "/"}
-                        className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        className="group w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center hover:bg-red-50 hover:shadow-inner transition-all duration-300"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-5 h-5 text-slate-400 group-hover:text-red-500 transition-colors" />
                     </button>
                 </div>
             </div>
 
             {/* ── MAIN CONTENT (Split Layout) ── */}
-            <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col lg:flex-row gap-6">
+            <div className="max-w-[1400px] mx-auto w-full flex-1 flex flex-col lg:flex-row gap-6 lg:gap-8">
                 
-                {/* ── LEFT: AUDIO CONTROLS ── */}
-                <div className="flex-1 bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 relative overflow-hidden flex flex-col items-center justify-center p-8 min-h-[500px]">
+                {/* ── LEFT: AUDIO CONTROLS (THE ORB) ── */}
+                <div className="flex-[1.2] lg:flex-[1.5] relative rounded-[2.5rem] bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl overflow-hidden flex flex-col items-center justify-between p-8 min-h-[500px] lg:min-h-[600px] border border-slate-800">
                     
-                    {/* Live Audio Indicator Top Left */}
-                    <div className="absolute top-8 left-8 flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", isCalling ? "bg-red-500 animate-pulse" : "bg-slate-300")} />
-                        <span className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">
-                            LIVE AUDİO
-                        </span>
+                    {/* Background Ambient Glow */}
+                    <div className={cn(
+                        "absolute inset-0 opacity-20 transition-opacity duration-1000",
+                        isCalling && isAiSpeaking ? "opacity-40" : ""
+                    )}>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#CCFF00] rounded-full blur-[160px] opacity-10" />
                     </div>
 
-                    {/* Central Orb / Microphone Area */}
-                    <div className="relative mt-12 mb-20 flex flex-col items-center">
-                        {status === "ready" || status === "ended" ? (
-                             <button
-                                onClick={toggleCall}
-                                className="group relative w-32 h-32 rounded-full border border-slate-200 flex items-center justify-center bg-white shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-300"
-                            >
-                                <Power className="w-10 h-10 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-                            </button>
-                        ) : (
-                            <div className="relative w-48 h-48 flex items-center justify-center">
-                                {/* Soundwaves when speaking */}
-                                {isCalling && (
-                                    <>
-                                        <div className={cn("absolute inset-0 rounded-full border border-[#CCFF00]/30 transition-all duration-1000", isAiSpeaking ? "scale-[1.8] opacity-0 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" : "scale-100 opacity-20")} />
-                                        <div className={cn("absolute inset-0 rounded-full border border-[#CCFF00]/50 transition-all duration-700 delay-150", isAiSpeaking ? "scale-[1.4] opacity-0 animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]" : "scale-100 opacity-20")} />
-                                    </>
-                                )}
-                                
-                                {/* Inner Core */}
-                                <div className={cn(
-                                    "relative z-10 w-32 h-32 rounded-full bg-[#0F172A] flex items-center justify-center shadow-2xl transition-transform duration-500",
-                                    status === "connecting" && "animate-pulse",
-                                    isAiSpeaking && "scale-110 shadow-[0_0_40px_rgba(204,255,0,0.3)]"
-                                )}>
-                                    <Mic className={cn(
-                                        "w-10 h-10 transition-colors",
-                                        isAiSpeaking ? "text-[#CCFF00]" : "text-white/80"
-                                        )} 
-                                    />
-                                </div>
+                    {/* Top Status Bar */}
+                    <div className="w-full flex justify-between items-center relative z-10 px-4">
+                        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                            <div className={cn("w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]", isCalling ? "bg-red-500 animate-pulse shadow-red-500/50" : "bg-slate-500")} />
+                            <span className="text-xs font-bold tracking-[0.2em] text-white/80 uppercase">
+                                {isCalling ? "LIVE AUDIO" : "STANDBY"}
+                            </span>
+                        </div>
+                        {isCalling && (
+                            <div className="flex items-center gap-2 bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-white/80">
+                                <Volume2 className="w-4 h-4 text-[#CCFF00]" />
+                                <span className="font-mono text-sm tracking-wider font-semibold">{formatTime(duration)}</span>
                             </div>
                         )}
+                    </div>
 
-                        <div className="text-center mt-12">
-                            <h2 className="text-xl font-bold text-slate-800 mb-2">
-                                {status === "ready" ? "Bağlanmaya Hazır" : status === "connecting" ? "Bağlanıyor..." : status === "talking" ? (isAiSpeaking ? "Yapay Zeka Konuşuyor..." : "Dinleniyor...") : "Çağrı Sonlandı"}
+                    {/* Central Orb Display */}
+                    <div className="relative flex-1 flex flex-col items-center justify-center w-full z-10 mt-8 mb-4">
+                        <div className="relative w-64 h-64 flex items-center justify-center">
+                            
+                            {/* Animated Rings for AI Speaking */}
+                            {isCalling && (
+                                <>
+                                    <div className={cn("absolute inset-0 rounded-full border-2 transition-all duration-1000 ease-out", isAiSpeaking ? "border-[#CCFF00]/40 scale-[1.8] opacity-0" : "border-slate-700/50 scale-100 opacity-20")} />
+                                    <div className={cn("absolute inset-0 rounded-full border-2 transition-all duration-1000 ease-out delay-150", isAiSpeaking ? "border-[#CCFF00]/30 scale-[1.5] opacity-0" : "border-slate-700/50 scale-100 opacity-20")} />
+                                    <div className={cn("absolute inset-0 rounded-full border-2 transition-all duration-1000 ease-out delay-300", isAiSpeaking ? "border-[#CCFF00]/20 scale-[1.2] opacity-0" : "border-slate-700/50 scale-100 opacity-20")} />
+                                </>
+                            )}
+                            
+                            {/* Inner AI Core */}
+                            <div className={cn(
+                                "relative z-10 w-40 h-40 rounded-full flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                                status === "connecting" && "animate-pulse",
+                                isAiSpeaking 
+                                    ? "bg-gradient-to-tr from-[#99cc00] to-[#e6ff66] shadow-[0_0_80px_rgba(204,255,0,0.4)] scale-110" 
+                                    : "bg-gradient-to-tr from-slate-800 to-slate-700 shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-slate-600/50 scale-100 hover:scale-105"
+                            )}>
+                                {isCalling ? (
+                                    <Activity className={cn(
+                                        "w-14 h-14 transition-colors duration-500",
+                                        isAiSpeaking ? "text-slate-900" : "text-white/40"
+                                    )} />
+                                ) : (
+                                    <Mic className="w-14 h-14 text-white/50" />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Status Text under Orb */}
+                        <div className="absolute bottom-[-10px] text-center w-full">
+                            <h2 className="text-2xl font-semibold text-white tracking-wide mb-3 drop-shadow-md">
+                                {status === "ready" || status === "ended" 
+                                    ? "Demoyu Başlatın" 
+                                    : status === "connecting" 
+                                        ? "Bağlantı Kuruluyor..." 
+                                        : (isAiSpeaking ? "Yapay Zeka Konuşuyor" : "Sizi Dinliyor...")}
                             </h2>
-                            <p className="text-sm text-slate-500 max-w-xs mx-auto">
-                                {status === "ready" ? "Test için butona dokunun." : "Konuşarak yapay zeka ile etkileşime geçebilirsiniz."}
+                            <p className="text-slate-400 text-sm max-w-[250px] mx-auto leading-relaxed">
+                                {status === "ready" || status === "ended" 
+                                    ? "Gerçek zamanlı gecikmesiz görüşme deneyimine hazırız." 
+                                    : "Normal bir telefon görüşmesi yapar gibi konuşabilirsiniz."}
                             </p>
                         </div>
                     </div>
 
-                    {/* Bottom Controls */}
-                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                    {/* Bottom Control Dock */}
+                    <div className="relative z-10 bg-white/10 backdrop-blur-xl p-2.5 rounded-full border border-white/10 shadow-2xl flex items-center gap-3 w-max">
                         <button 
                             disabled={!isCalling}
-                            className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                            className="w-14 h-14 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-slate-700"
+                            title="Mikrofonu Kapat"
                         >
                             <MicOff className="w-5 h-5" />
                         </button>
+                        
                         <button 
                             onClick={toggleCall}
                             className={cn(
-                                "w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30 hover:scale-105 transition-all text-xl mt-[-10px]",
-                                isCalling || status === "connecting" ? "bg-red-500" : "bg-emerald-500 shadow-emerald-500/30"
+                                "w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95",
+                                isCalling || status === "connecting" 
+                                    ? "bg-red-500 shadow-red-500/40 hover:bg-red-600" 
+                                    : "bg-[#CCFF00] text-slate-900 shadow-[#CCFF00]/20 hover:bg-[#b0df00] border-2 border-[#CCFF00]/50"
                             )}
                         >
-                            {isCalling || status === "connecting" ? <PhoneOff className="w-6 h-6" /> : <Mic className="w-7 h-7" />}
+                            {isCalling || status === "connecting" ? <PhoneOff className="w-7 h-7" /> : <PhoneOff className="w-7 h-7 rotate-[135deg]" />}
+                        </button>
+
+                        <button 
+                            disabled={!isCalling}
+                            className="w-14 h-14 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-slate-700"
+                            title="Ayarlar"
+                        >
+                            <Activity className="w-5 h-5" />
                         </button>
                     </div>
-
                 </div>
 
-                {/* ── RIGHT: TRANSCRIPT ── */}
-                <div className="flex-1 lg:max-w-md xl:max-w-lg bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col overflow-hidden">
+                {/* ── RIGHT: TRANSCRIPT LAYER ── */}
+                <div className="flex-1 flex flex-col bg-white rounded-[2.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden min-h-[500px] lg:min-h-[600px]">
                     
                     {/* Transcript Header */}
-                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-slate-400">
-                            <span className="w-4 h-4 rounded-sm border-2 border-slate-300 flex items-center justify-center overflow-hidden">
-                                <div className="w-full h-px bg-slate-300 transform -rotate-45" />
-                            </span>
-                            <span className="text-[11px] font-bold tracking-widest uppercase">LİVE TRANSCRİPT</span>
+                    <div className="px-8 py-6 border-b border-slate-100/80 bg-slate-50/50 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            </div>
+                            <span className="font-semibold text-slate-800">Canlı Transkript</span>
                         </div>
-                        <div className="px-3 py-1 bg-slate-50 rounded-full font-mono text-xs font-semibold text-slate-500 border border-slate-100">
-                            {formatTime(duration)}
+                        <div className="flex items-center gap-2">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_theme(colors.emerald.500)]" />
+                             <span className="text-xs font-medium text-slate-500">Sistem Aktif</span>
                         </div>
                     </div>
 
                     {/* Transcript Body */}
-                    <div className="flex-1 bg-slate-50/50 relative">
-                        <div ref={scrollRef} className="absolute inset-0 overflow-y-auto p-6 space-y-6">
+                    <div className="flex-1 relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-50/50 to-white">
+                        <div ref={scrollRef} className="absolute inset-0 overflow-y-auto px-8 py-6 space-y-6 custom-scrollbar">
                             {messages.map((msg, idx) => {
                                 const isAI = msg.speaker === "ai";
                                 return (
-                                    <div key={idx} className={cn("flex flex-col w-full animate-in fade-in slide-in-from-bottom-2", isAI ? "items-start" : "items-end")}>
-                                        <span className="text-[10px] font-bold tracking-wider text-slate-400 mb-2 uppercase ml-1 mr-1">
-                                            {isAI ? "LUERA AI" : "SİZ"}
-                                        </span>
-                                        <div className={cn(
-                                            "relative px-5 py-3.5 max-w-[85%] text-[15px] shadow-sm",
-                                            isAI 
-                                                ? "bg-white text-slate-700/90 rounded-2xl rounded-tl-sm border border-slate-100 leading-relaxed font-medium" 
-                                                : "bg-[#0F172A] text-white rounded-2xl rounded-tr-sm leading-relaxed"
-                                        )}>
-                                            {msg.text}
+                                    <div key={idx} className={cn("flex w-full animate-in fade-in slide-in-from-bottom-2", isAI ? "justify-start" : "justify-end")}>
+                                        <div className={cn("flex flex-col max-w-[80%]", isAI ? "items-start" : "items-end")}>
+                                            <span className="text-[11px] font-bold tracking-wider text-slate-400 mb-1.5 uppercase ml-1 mr-1">
+                                                {isAI ? "LUERA AI" : "SİZ"}
+                                            </span>
+                                            <div className={cn(
+                                                "relative px-6 py-4 text-[15px] shadow-sm",
+                                                isAI 
+                                                    ? "bg-white text-slate-700 border border-slate-100 rounded-3xl rounded-tl-sm leading-relaxed" 
+                                                    : "bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl rounded-tr-sm leading-relaxed"
+                                            )}>
+                                                {msg.text}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -257,30 +297,53 @@ export const LiveTestPage = () => {
                             
                             {/* Typing Indicator */}
                             {isCalling && isAiSpeaking && (
-                                <div className="flex flex-col items-start pt-2">
-                                    <span className="text-[10px] font-bold tracking-wider text-[#CCFF00] mb-2 uppercase flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 bg-[#CCFF00] rounded-full animate-pulse" />
-                                        LUERA AI YAZIYOR / KONUŞUYOR...
-                                    </span>
+                                <div className="flex justify-start w-full animate-in fade-in">
+                                    <div className="flex flex-col items-start max-w-[80%]">
+                                        <span className="text-[11px] font-bold tracking-wider text-[#CCFF00] mb-1.5 uppercase ml-1">
+                                            LUERA AI YANIT VERİYOR...
+                                        </span>
+                                        <div className="bg-white px-6 py-5 rounded-3xl rounded-tl-sm border border-[#CCFF00]/30 shadow-sm flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-[#CCFF00] animate-bounce" style={{ animationDelay: "0ms" }} />
+                                            <div className="w-2 h-2 rounded-full bg-[#CCFF00] animate-bounce" style={{ animationDelay: "150ms" }} />
+                                            <div className="w-2 h-2 rounded-full bg-[#CCFF00] animate-bounce" style={{ animationDelay: "300ms" }} />
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Transcript Footer Info */}
-                    <div className="p-4 border-t border-slate-100 bg-white flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                             <div className="flex items-center justify-center p-1 bg-emerald-50 rounded text-emerald-600">
-                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    {/* Transcript Footer Logs/Stats */}
+                    <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
+                             <div className="flex items-center justify-center p-1.5 bg-emerald-100/50 rounded-md text-emerald-600 border border-emerald-100">
+                                 <Activity className="w-3.5 h-3.5" />
                              </div>
-                             <span>Gecikme: <span className="text-emerald-600 font-bold">~120ms</span></span> {/* Hardcoded for demo/looks */}
+                             <span>Gecikme (Latency): <span className="text-emerald-600 font-bold ml-1">~120ms</span></span> 
                         </div>
-                        <div className="text-[11px] font-semibold text-slate-400">
-                            Model: <span className="text-slate-700">ElevenLabs AI</span>
+                        <div className="flex gap-4">
+                            <div className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> ElevenLabs AI
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Global override for custom scrollbar in this specific page context if needed */}
+            <style>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background-color: #cbd5e1;
+                    border-radius: 20px;
+                }
+            `}</style>
         </div>
     );
 };
+
