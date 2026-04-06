@@ -1,6 +1,6 @@
 import { Conversation } from '@elevenlabs/client';
 
-export const ELEVENLABS_AGENT_ID = (import.meta.env && import.meta.env.VITE_ELEVENLABS_AGENT_ID) || "agent_2201kn09ms06fykt6mmdsythacwh";
+export const ELEVENLABS_AGENT_ID = (import.meta.env && import.meta.env.VITE_ELEVENLABS_AGENT_ID) || "agent_6701knh148pgfyvvsbfjeg27ps3n";
 
 export interface ConversationCallbacks {
     onConnect?: () => void;
