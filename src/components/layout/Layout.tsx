@@ -3,12 +3,13 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
     LayoutDashboard, Radio, PhoneCall, ListChecks,
     CalendarDays, MessageSquare, Settings, ChevronLeft,
-    ChevronRight, Menu, Bell, X
+    ChevronRight, Menu, Bell, X, BrainCircuit
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 const navItems = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
+    { to: "/agents", icon: BrainCircuit, label: "AI Asistanlar" },
     { to: "/campaigns", icon: Radio, label: "Kampanyalar" },
     { to: "/live", icon: PhoneCall, label: "Canlı Çağrılar" },
     { to: "/results", icon: ListChecks, label: "Sonuçlar" },

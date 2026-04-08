@@ -3,9 +3,11 @@ import {
     Radio, Play, Pause, Trash2, Plus, Upload,
     Phone, CheckCircle2, ChevronRight,
     TrendingUp, FileText, Check, FileSpreadsheet,
-    XCircle, Flame, CalendarCheck, Zap, Snowflake
+    XCircle, Flame, CalendarCheck, Zap, Snowflake, Headphones
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
+import { AgentPromptEditor } from "@/components/AgentPromptEditor";
 
 type CampaignStatus = "active" | "paused" | "completed" | "draft";
 
@@ -13,22 +15,30 @@ const campaigns = [
     {
         id: 1, name: "Mart Kampanyası — Klinikler", status: "active" as CampaignStatus,
         total: 250, called: 147, answered: 112, hot: 38, cold: 74, appointments: 12,
-        createdAt: "28 Şubat 2026", progress: 59
+        createdAt: "28 Şubat 2026", progress: 59,
+        agentId: "agent_6301knq9gn2nf3jryph25j66510p", // Gerçek LUNA/Klinik Ajanı
+        agentRole: "Klinik Randevu Asistanı"
     },
     {
         id: 2, name: "Vip Müşteri Takip", status: "paused" as CampaignStatus,
         total: 80, called: 45, answered: 40, hot: 18, cold: 22, appointments: 5,
-        createdAt: "25 Şubat 2026", progress: 56
+        createdAt: "25 Şubat 2026", progress: 56,
+        agentId: "pqHfZKP75CvOlQylNhV4", // Bill (Örnek)
+        agentRole: "VIP Müşteri Temsilcisi"
     },
     {
         id: 3, name: "Yeni Ürün Duyurusu", status: "completed" as CampaignStatus,
         total: 120, called: 120, answered: 98, hot: 42, cold: 56, appointments: 19,
-        createdAt: "20 Şubat 2026", progress: 100
+        createdAt: "20 Şubat 2026", progress: 100,
+        agentId: "cgSgspJ2msm6clMC8zVf", // Brian (Örnek)
+        agentRole: "Satış & Tanıtım Uzmanı"
     },
     {
         id: 4, name: "B2B Segment — İnşaat", status: "draft" as CampaignStatus,
         total: 300, called: 0, answered: 0, hot: 0, cold: 0, appointments: 0,
-        createdAt: "1 Mart 2026", progress: 0
+        createdAt: "1 Mart 2026", progress: 0,
+        agentId: "cjVigY5qzO86HvrZZtP0", // Callum (Örnek)
+        agentRole: "B2B Ağ Geliştirme Asistanı"
     },
 ];
 
@@ -44,6 +54,7 @@ export const CampaignsPage = () => {
     const [newName, setNewName] = useState("");
     const [campaignList, setCampaignList] = useState(campaigns);
     const [selectedCampaign, setSelectedCampaign] = useState<(typeof campaigns)[0] | null>(null);
+    const [voiceDemoCampaign, setVoiceDemoCampaign] = useState<(typeof campaigns)[0] | null>(null);
 
     // File Upload States
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -91,7 +102,9 @@ export const CampaignsPage = () => {
             cold: 0,
             appointments: 0,
             createdAt: new Date().toLocaleDateString("tr-TR", { day: 'numeric', month: 'long', year: 'numeric' }),
-            progress: 0
+            progress: 0,
+            agentId: "agent_6701knh148pgfyvvsbfjeg27ps3n", // Default
+            agentRole: "Genel Asistan"
         };
 
         setCampaignList(prev => [newCampaign, ...prev]);
@@ -229,6 +242,15 @@ export const CampaignsPage = () => {
                                                 <Play className="w-4 h-4" /> Başlat
                                             </button>
                                         )}
+                                        {/* Voice Demo Button */}
+                                        <button
+                                            onClick={() => setVoiceDemoCampaign(c)}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-[#CCFF00] text-xs font-bold border border-slate-800 hover:bg-slate-800 hover:shadow-[0_0_20px_rgba(204,255,0,0.15)] transition-all active:scale-[0.98] group"
+                                        >
+                                            <Headphones className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                            Sesli Demo
+                                        </button>
+
                                         <div className="flex gap-2 w-full mt-auto">
                                             <button
                                                 onClick={() => setSelectedCampaign(c)}
@@ -455,10 +477,25 @@ export const CampaignsPage = () => {
                                 </div>
                             </div>
 
+                            {/* Agent Prompt Editor Integration */}
+                            <div className="mt-8">
+                                <AgentPromptEditor 
+                                    agentId={selectedCampaign.agentId} 
+                                    agentRole={selectedCampaign.agentRole} 
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
+            {/* Voice Agent Demo Modal */}
+            <VoiceAgentDemoModal
+                isOpen={voiceDemoCampaign !== null}
+                onClose={() => setVoiceDemoCampaign(null)}
+                campaignName={voiceDemoCampaign?.name || ""}
+                agentId={voiceDemoCampaign?.agentId}
+                agentRole={voiceDemoCampaign?.agentRole}
+            />
         </div>
     );
 };

@@ -1,0 +1,417 @@
+{
+    "agent_id": "agent_6301knq9gn2nf3jryph25j66510p",
+    "name": "Onur",
+    "conversation_config": {
+        "asr": {
+            "quality": "high",
+            "provider": "scribe_realtime",
+            "user_input_audio_format": "pcm_16000",
+            "keywords": []
+        },
+        "turn": {
+            "turn_timeout": 7.0,
+            "initial_wait_time": null,
+            "silence_end_call_timeout": -1.0,
+            "soft_timeout_config": {
+                "timeout_seconds": -1.0,
+                "message": "Hhmmmm...yeah.",
+                "use_llm_generated_message": false
+            },
+            "mode": "turn",
+            "turn_eagerness": "normal",
+            "spelling_patience": "auto",
+            "speculative_turn": true,
+            "turn_model": "turn_v2"
+        },
+        "tts": {
+            "model_id": "eleven_v3_conversational",
+            "voice_id": "Emv9kLcuxJRj7yEDU8CT",
+            "supported_voices": [],
+            "expressive_mode": false,
+            "suggested_audio_tags": [],
+            "agent_output_audio_format": "pcm_22050",
+            "optimize_streaming_latency": 4,
+            "stability": 1.0,
+            "speed": 1.0,
+            "similarity_boost": 0.8,
+            "text_normalisation_type": "elevenlabs",
+            "pronunciation_dictionary_locators": []
+        },
+        "conversation": {
+            "text_only": false,
+            "max_duration_seconds": 600,
+            "client_events": [
+                "audio",
+                "interruption",
+                "user_transcript",
+                "agent_response",
+                "agent_response_correction"
+            ],
+            "file_input": {
+                "enabled": true,
+                "max_files_per_conversation": 10
+            },
+            "monitoring_enabled": false,
+            "monitoring_events": [
+                "user_transcript",
+                "agent_response",
+                "agent_response_correction"
+            ],
+            "dtmf_input_settings": null
+        },
+        "language_presets": {},
+        "vad": {
+            "background_voice_detection": false
+        },
+        "agent": {
+            "first_message": "\"Merhaba efendim. VMS \u00fc\u00e7 y\u00fcz altm\u0131\u015f dijitalden ar\u0131yorum, ismim onur,  g\u00f6r\u00fc\u015fmelerimiz kalite standartlar\u0131 gere\u011fince kay\u0131t alt\u0131na al\u0131nmaktad\u0131r. M\u00fcsait misiniz acaba?\"",
+            "language": "tr",
+            "hinglish_mode": false,
+            "dynamic_variables": {
+                "dynamic_variable_placeholders": {}
+            },
+            "disable_first_message_interruptions": false,
+            "max_conversation_duration_message": "",
+            "prompt": {
+                "prompt": "# Personality\n\nSen VMS \u00fc\u00e7 y\u00fcz altm\u0131\u015f Dijital'in k\u0131demli sat\u0131\u015f temsilcisisin. Ad\u0131n Onur.\nKendinden eminsin, neyi satt\u0131\u011f\u0131n\u0131 biliyorsun.\nG\u00fcven veren, \u00f6l\u00e7\u00fcl\u00fc ve net bir dan\u0131\u015fman profilisin.\nGereksiz nezaket kal\u0131plar\u0131 kullanm\u0131yorsun.\nYaln\u0131zca di\u015f kliniklerine sat\u0131\u015f yap\u0131yorsun. Di\u015f sekt\u00f6r\u00fcn\u00fc ve klinik y\u00f6neticilerinin dilini iyi biliyorsun.\n\n# Tone\n\nYan\u0131tlar\u0131n maksimum bir veya iki c\u00fcmle olsun. Kar\u015f\u0131 tarafa konu\u015fma alan\u0131 b\u0131rak.\nG\u00fcnl\u00fck ama \u00f6l\u00e7\u00fcl\u00fc T\u00fcrk\u00e7e kullan.\nOnay verirken \"kesinlikle\", \"do\u011fru\", \"anl\u0131yorum\" kullan.\nGe\u00e7i\u015f yaparken \"\u015f\u00f6yle ki\", \"a\u00e7\u0131k\u00e7as\u0131\", \"tam bu noktada\" kullan.\nSaatleri g\u00fcnl\u00fck dilde s\u00f6yle: \"\u00f6\u011fleden sonra iki bu\u00e7uk\", \"sabah dokuz\" gibi.\nTarihleri do\u011fal s\u00f6yle: \"bu per\u015fembe\", \"\u00f6n\u00fcm\u00fczdeki pazartesi\" gibi.\nRakamlar\u0131 ve sembolleri yaz\u0131yla s\u00f6yle.\n\n# Rules\n\nKonu\u015fma s\u0131ras\u0131 sendeyken her zaman tek bir soruyla bitir. Ayn\u0131 anda iki soru sorma.\nS\u00f6z kesilirse hemen sus, dinle, yeni bir cevapla devam et.\nM\u00fc\u015fteriyi \u00f6vme. \"Harika soru\" veya \"\u00e7ok do\u011fru d\u00fc\u015f\u00fcn\u00fcyorsunuz\" gibi ifadeler kullanma.\nGereksiz sevin\u00e7 ifadesi kullanma: \"vay be\", \"ya ger\u00e7ekten mi\", \"h\u0131 h\u0131\", \"tamamd\u0131r\" yasak.\nFormatlama yasak: asla asterisk, hashtag veya madde i\u015fareti kullanma. Sadece d\u00fcz metin \u00fcret.\nDi\u015f sekt\u00f6r\u00fc d\u0131\u015f\u0131ndaki konularda yorum yapma, konuyu nazik\u00e7e geri \u00e7ek.\n\n# Services\n\nVMS \u00fc\u00e7 y\u00fcz altm\u0131\u015f Dijital'in di\u015f kliniklerine \u00f6zel sundu\u011fu hizmetler:\nWeb tasar\u0131m\u0131: di\u015f klini\u011fi tan\u0131t\u0131m sitesi, online randevu sistemi entegrasyonu, tedavi sayfalar\u0131 (implant, ortodonti, estetik di\u015f, kanal tedavisi vb.), mobil uyumlu hasta odakl\u0131 tasar\u0131m, ayl\u0131k site bak\u0131m\u0131.\nSosyal medya y\u00f6netimi: implant, di\u015f beyazlatma, zirkonyum gibi tedavilere \u00f6zel i\u00e7erik \u00fcretimi, hasta \u00f6ncesi-sonras\u0131 payla\u015f\u0131m y\u00f6netimi, hekim tan\u0131t\u0131m i\u00e7erikleri, hedefli reklam y\u00f6netimi, g\u00fcven in\u015fas\u0131.\nGoogle reklamlar\u0131: \"di\u015f klini\u011fi\", \"implant fiyatlar\u0131\", \"ortodonti [il\u00e7e]\" gibi tedavi ve b\u00f6lge bazl\u0131 arama reklamlar\u0131, Google Haritalar g\u00f6r\u00fcn\u00fcrl\u00fc\u011f\u00fc, rakip klini\u011fin \u00fcst\u00fcnde \u00e7\u0131kma.\nSEO dan\u0131\u015fmanl\u0131\u011f\u0131: yerel arama kelimelerinde \u00fcst s\u0131ra, tedavi sayfalar\u0131n\u0131n Google'da bulunabilirli\u011fi, hasta y\u00f6nlendirme trafi\u011fi art\u0131\u015f\u0131.\nMarka tescil: klinik ad\u0131 ve logosu i\u00e7in ara\u015ft\u0131rma, ba\u015fvuru, takip s\u00fcre\u00e7leri.\nKurumsal kimlik tasar\u0131m\u0131: logo, kartvizit, klinik i\u00e7i tabela, hasta ileti\u015fim materyalleri, randevu kart\u0131.\n\n# Goal\n\nA\u015fa\u011f\u0131daki s\u0131rayla ilerle:\n1. First message ile aramay\u0131 a\u00e7\n2. M\u00fcsait ise k\u00f6pr\u00fc c\u00fcmleyi s\u00f6yle ve ihtiyac\u0131 tespit et\n3. \u0130htiyaca g\u00f6re ilgili hizmeti \u00f6ner ve de\u011feri somutla\u015ft\u0131r\n4. \u0130tirazlar\u0131 y\u00f6net, en az iki kez farkl\u0131 a\u00e7\u0131dan dene\n5. Her g\u00f6r\u00fc\u015fmeden ya sat\u0131\u015f ya randevu \u00e7\u0131kar\nBu ad\u0131m \u00f6nemlidir: Her aramay\u0131 mutlaka somut bir sonraki ad\u0131mla bitir.\n# Conversation Flow\n\n[A\u015fama 1: Giri\u015f]\nFirst message'\u0131 s\u00f6yle.\nHay\u0131r derse bir kez dene: \"Anl\u0131yorum. Ne zaman m\u00fcsait olursunuz, o zaman arayay\u0131m?\"\nKesin hay\u0131r derse kibarca kapat.\nEvet derse A\u015fama 2'ye ge\u00e7.\n\n[A\u015fama 2: K\u00f6pr\u00fc ve Ke\u015fif]\n\"\u015eunu s\u00f6yleyeyim, biz VMS \u00fc\u00e7 y\u00fcz altm\u0131\u015f Dijital olarak di\u015f kliniklerine \u00f6zel\nweb tasar\u0131m\u0131, sosyal medya y\u00f6netimi ve Google'da g\u00f6r\u00fcn\u00fcrl\u00fck konular\u0131nda\nu\u00e7tan uca dijital hizmet veriyoruz.\nPeki bu s\u00fcre\u00e7lerden hangisi klini\u011finize \u015fu an daha \u00e7ok de\u011fer katar?\"\n\nCevaba g\u00f6re dallan:\n\nWeb sitesi \u2192 A\u015fama 3A\n\nSosyal medya \u2192 A\u015fama 3B\n\nGoogle / SEO \u2192 A\u015fama 3C\n\nMarka tescil \u2192 A\u015fama 3D\n\nBelirsiz cevap \u2192 Ke\u015fif sorusu sor: \"\u015eu an Google'da 'di\u015f klini\u011fi diye arayan bir hasta sizi bulabiliyor mu?\"\n\nM\u00fc\u015fteri \"memnun de\u011filim\" veya benzer bir cevap verirse\n\u00f6nce hangi alanda memnun olmad\u0131\u011f\u0131n\u0131 tek bir soruyla netle\u015ftir.\n\nCevaba g\u00f6re ilgili a\u015famaya ge\u00e7.\n\n[A\u015fama 3A: Web Sitesi]\n\"\u0130mplant veya zirkonyum arayan hasta aday\u0131n\u0131n ilk bakt\u0131\u011f\u0131 yer web siteniz oluyor.\nProfesyonel g\u00f6r\u00fcnmeyen ya da mobilde bozulan bir site, o hastay\u0131 do\u011frudan rakip klini\u011fe g\u00f6nderiyor.\"\nDur, tepkisini bekle. Sonra devam et:\n\"Tedavi sayfalar\u0131 ve online randevu entegrasyonuyla birlikte hasta odakl\u0131 siteler yap\u0131yoruz.\nBir g\u00f6r\u00fc\u015fme ayarlayal\u0131m m\u0131?\"\n\n[A\u015fama 3B: Sosyal Medya]\n\"Di\u015f kliniklerinde sosyal medya g\u00fcven meselesi, orada d\u00fczensiz ya da zay\u0131f bir g\u00f6r\u00fcn\u00fcm hastan\u0131n karar\u0131n\u0131 do\u011frudan etkiliyor.\n\u0130mplant ve estetik tedavi i\u00e7eriklerinden \u00f6ncesi-sonras\u0131 payla\u015f\u0131mlar\u0131na kadar s\u00fcreci biz \u00fcstleniyoruz.\nBir g\u00f6r\u00fc\u015felim mi?\"\n\n[A\u015fama 3C: Google ve SEO]\n\"B\u00f6lgenizdeki hasta Google'da 'di\u015f klini\u011fi' veya 'implant fiyatlar\u0131' diye ar\u0131yor ve ilk \u00fc\u00e7 sonu\u00e7tan birini se\u00e7iyor.\nOrada g\u00f6r\u00fcnm\u00fcyorsan\u0131z o hasta rakibinize gidiyor.\nNe zaman bir g\u00f6r\u00fc\u015fme ayarlayal\u0131m?\"\n\n[A\u015fama 3D: Marka Tescil]\n\"Tescilsiz bir klinik ad\u0131 ciddi hukuki risk ta\u015f\u0131yor.\nBa\u015fka bir klinik ayn\u0131 ismi tescil ettirirse s\u00fcreci tersine \u00e7evirmek \u00e7ok maliyetli olur.\nNe zaman bir g\u00f6r\u00fc\u015felim?\"\n\n[A\u015fama 4: Kapama]\n\"Size \u00f6zel bir de\u011ferlendirme haz\u0131rlayay\u0131m.\nK\u0131sa bir g\u00f6r\u00fc\u015fme yapal\u0131m. Sabah m\u0131 \u00f6\u011fleden sonra m\u0131 daha uygun?\"\nZaman al\u0131nd\u0131\u011f\u0131nda checkCalendar fonksiyonunu \u00e7al\u0131\u015ft\u0131r.\n\"Bir saniye bak\u0131yorum... [g\u00fcn] [saat] ve [saat] bo\u015f. Hangisi uygun?\"\nSaat onayland\u0131\u011f\u0131nda bookAppointment fonksiyonunu \u00e7al\u0131\u015ft\u0131r.\n\n[A\u015fama 5: Kapan\u0131\u015f]\n\"[G\u00fcn] [saat] i\u00e7in kaydettim.\nWhatsApp hatt\u0131m\u0131zdan k\u0131sa s\u00fcre i\u00e7inde teyit mesaj\u0131 gelecek.\n\u0130yi g\u00fcnler dilerim.\"\nBu ad\u0131m \u00f6nemlidir: Randevu onayland\u0131ktan sonra g\u00f6r\u00fc\u015fmeyi sonland\u0131r.\n\"Ba\u015fka nas\u0131l yard\u0131mc\u0131 olabilirim?\" gibi ifadeler kullanma.\nKapan\u0131\u015f c\u00fcmlesinden sonra m\u00fc\u015fterinin vedala\u015fmas\u0131n\u0131 bekle ve kapat.\n\n# Objection Handling\n\n\"Zaten bir ajansla \u00e7al\u0131\u015f\u0131yoruz\":\n\"Anl\u0131yorum. Peki mevcut sonu\u00e7lardan memnun musunuz?\nBaz\u0131 di\u015f klinikleri ikinci teklif almak i\u00e7in geldi ve ciddi fark g\u00f6rd\u00fc.\"\n\"Pahal\u0131 olur\":\n\"\u015e\u00f6yle ki, kaybetti\u011finiz bir implant hastas\u0131n\u0131n de\u011ferini d\u00fc\u015f\u00fcnd\u00fc\u011f\u00fcn\u00fczde bu bir yat\u0131r\u0131m.\nPaketlerimiz her klini\u011fe g\u00f6re \u015fekilleniyor, rakamlar\u0131 g\u00f6rmeden karar vermek do\u011fru olmaz.\"\n\"D\u00fc\u015f\u00fcnmek istiyorum\":\n\"Anl\u0131yorum. Ama b\u00f6lgenizdeki rakip klinikler bu s\u00fcre\u00e7te b\u00fcy\u00fcmeye devam ediyor.\nSadece rakamlar\u0131 g\u00f6rmek i\u00e7in bile k\u0131sa bir g\u00f6r\u00fc\u015fme yapal\u0131m, karar size kalm\u0131\u015f.\"\n\"Bilgi g\u00f6nderin\":\n\"Katalog atabilirim ancak klini\u011finize \u00f6zel konu\u015fmak \u00e7ok daha verimli olur.\nYar\u0131n otuz dakika ay\u0131rabilir misiniz?\"\n\"\u0130lgilenmiyorum\" ilk red:\n\"Anl\u0131yorum. Peki dijital tarafta klini\u011finizin \u015fu an en b\u00fcy\u00fck zorlu\u011fu ne?\"\n\"\u0130lgilenmiyorum\" ikinci red:\n\"Anlad\u0131m, \u0131srar etmek istemem. \u0130yi \u00e7al\u0131\u015fmalar.\"\n\n# Guardrails\n\nKesin fiyat verme. \"Paketlerimiz her klini\u011fe g\u00f6re \u015fekilleniyor\" de ve g\u00f6r\u00fc\u015fmeye y\u00f6nlendir.\n\u00dc\u00e7 net redden sonra sayg\u0131yla \u00e7ekil.\nYaln\u0131zca di\u015f kliniklerine y\u00f6nelik VMS \u00fc\u00e7 y\u00fcz altm\u0131\u015f Dijital hizmetleri hakk\u0131nda konu\u015f.\nDi\u015f sekt\u00f6r\u00fc d\u0131\u015f\u0131 sorularda \"Ben di\u015f klinikleriyle \u00e7al\u0131\u015f\u0131yorum, bu konuda size yard\u0131mc\u0131 olamam\" de.\nGer\u00e7ek olmayan vaat veya garanti verme.\nBu ad\u0131m \u00f6nemlidir: Her g\u00f6r\u00fc\u015fmeden mutlaka sat\u0131\u015f veya randevu \u00e7\u0131kar.",
+                "llm": "gpt-4.1-mini",
+                "reasoning_effort": null,
+                "thinking_budget": null,
+                "temperature": 0.4,
+                "max_tokens": 100,
+                "tool_ids": [],
+                "built_in_tools": {
+                    "end_call": null,
+                    "language_detection": null,
+                    "transfer_to_agent": null,
+                    "transfer_to_number": null,
+                    "skip_turn": null,
+                    "play_keypad_touch_tone": null,
+                    "voicemail_detection": null,
+                    "update_state": null,
+                    "memory_entry_search": null,
+                    "memory_entry_create": null,
+                    "memory_entry_update": null,
+                    "memory_entry_delete": null,
+                    "agent_prompt_change": null,
+                    "procedure_update": null,
+                    "transfer_to_genesys_chat": null,
+                    "search_documentation": null
+                },
+                "enable_parallel_tool_calls": false,
+                "mcp_server_ids": [],
+                "native_mcp_server_ids": [],
+                "knowledge_base": [],
+                "custom_llm": null,
+                "ignore_default_personality": false,
+                "rag": {
+                    "enabled": false,
+                    "embedding_model": "e5_mistral_7b_instruct",
+                    "max_vector_distance": 0.6,
+                    "max_documents_length": 50000,
+                    "max_retrieved_rag_chunks_count": 20,
+                    "num_candidates": null,
+                    "query_rewrite_prompt_override": null
+                },
+                "timezone": null,
+                "backup_llm_config": {
+                    "preference": "default"
+                },
+                "cascade_timeout_seconds": 8.0,
+                "tools": []
+            }
+        }
+    },
+    "metadata": {
+        "created_at_unix_secs": 1775676970,
+        "updated_at_unix_secs": 1775681175
+    },
+    "platform_settings": {
+        "evaluation": {
+            "criteria": []
+        },
+        "widget": {
+            "variant": "full",
+            "placement": "bottom-right",
+            "expandable": "never",
+            "avatar": {
+                "type": "orb",
+                "color_1": "#2792dc",
+                "color_2": "#9ce6e6"
+            },
+            "feedback_mode": "during",
+            "end_feedback": {
+                "type": "rating"
+            },
+            "bg_color": "#ffffff",
+            "text_color": "#000000",
+            "btn_color": "#000000",
+            "btn_text_color": "#ffffff",
+            "border_color": "#e1e1e1",
+            "focus_color": "#000000",
+            "border_radius": null,
+            "btn_radius": null,
+            "action_text": null,
+            "start_call_text": null,
+            "end_call_text": null,
+            "expand_text": null,
+            "listening_text": null,
+            "speaking_text": null,
+            "shareable_page_text": null,
+            "shareable_page_show_terms": true,
+            "terms_text": "#### Terms and conditions\n\nBy clicking \"Agree,\" and each time I interact with this AI agent, I consent to the recording, storage, and sharing of my communications with third-party service providers, and as described in the Privacy Policy.\nIf you do not wish to have your conversations recorded, please refrain from using this service.",
+            "terms_html": "<h4>Terms and conditions</h4>\n<p>By clicking &quot;Agree,&quot; and each time I interact with this AI agent, I consent to the recording, storage, and sharing of my communications with third-party service providers, and as described in the Privacy Policy.\nIf you do not wish to have your conversations recorded, please refrain from using this service.</p>\n",
+            "terms_key": null,
+            "show_avatar_when_collapsed": false,
+            "disable_banner": false,
+            "override_link": null,
+            "markdown_link_allowed_hosts": [],
+            "markdown_link_include_www": true,
+            "markdown_link_allow_http": true,
+            "mic_muting_enabled": false,
+            "transcript_enabled": false,
+            "text_input_enabled": true,
+            "conversation_mode_toggle_enabled": false,
+            "default_expanded": false,
+            "always_expanded": false,
+            "dismissible": false,
+            "show_agent_status": false,
+            "show_conversation_id": true,
+            "strip_audio_tags": true,
+            "syntax_highlight_theme": null,
+            "text_contents": {
+                "main_label": null,
+                "start_call": null,
+                "start_chat": null,
+                "new_call": null,
+                "end_call": null,
+                "mute_microphone": null,
+                "change_language": null,
+                "collapse": null,
+                "expand": null,
+                "copied": null,
+                "accept_terms": null,
+                "dismiss_terms": null,
+                "listening_status": null,
+                "speaking_status": null,
+                "connecting_status": null,
+                "chatting_status": null,
+                "input_label": null,
+                "input_placeholder": null,
+                "input_placeholder_text_only": null,
+                "input_placeholder_new_conversation": null,
+                "user_ended_conversation": null,
+                "agent_ended_conversation": null,
+                "conversation_id": null,
+                "error_occurred": null,
+                "copy_id": null,
+                "initiate_feedback": null,
+                "request_follow_up_feedback": null,
+                "thanks_for_feedback": null,
+                "thanks_for_feedback_details": null,
+                "follow_up_feedback_placeholder": null,
+                "submit": null,
+                "go_back": null,
+                "send_message": null,
+                "text_mode": null,
+                "voice_mode": null,
+                "switched_to_text_mode": null,
+                "switched_to_voice_mode": null,
+                "copy": null,
+                "download": null,
+                "wrap": null,
+                "agent_working": null,
+                "agent_done": null,
+                "agent_error": null
+            },
+            "styles": {
+                "base": null,
+                "base_hover": null,
+                "base_active": null,
+                "base_border": null,
+                "base_subtle": null,
+                "base_primary": null,
+                "base_error": null,
+                "accent": null,
+                "accent_hover": null,
+                "accent_active": null,
+                "accent_border": null,
+                "accent_subtle": null,
+                "accent_primary": null,
+                "overlay_padding": null,
+                "button_radius": null,
+                "input_radius": null,
+                "bubble_radius": null,
+                "sheet_radius": null,
+                "compact_sheet_radius": null,
+                "dropdown_sheet_radius": null
+            },
+            "language_selector": false,
+            "supports_text_only": true,
+            "custom_avatar_path": null,
+            "language_presets": {}
+        },
+        "data_collection": {},
+        "data_collection_scopes": {},
+        "overrides": {
+            "conversation_config_override": {
+                "turn": {
+                    "soft_timeout_config": {
+                        "message": false
+                    }
+                },
+                "tts": {
+                    "voice_id": false,
+                    "stability": false,
+                    "speed": false,
+                    "similarity_boost": false
+                },
+                "conversation": {
+                    "text_only": true
+                },
+                "agent": {
+                    "first_message": false,
+                    "language": false,
+                    "max_conversation_duration_message": false,
+                    "prompt": {
+                        "prompt": false,
+                        "llm": false,
+                        "tool_ids": false,
+                        "native_mcp_server_ids": false,
+                        "knowledge_base": false
+                    }
+                }
+            },
+            "custom_llm_extra_body": false,
+            "enable_conversation_initiation_client_data_from_webhook": false
+        },
+        "workspace_overrides": {
+            "conversation_initiation_client_data_webhook": null,
+            "webhooks": {
+                "post_call_webhook_id": null,
+                "events": [
+                    "transcript"
+                ],
+                "send_audio": false
+            }
+        },
+        "testing": {
+            "attached_tests": [],
+            "referenced_tests_ids": []
+        },
+        "archived": false,
+        "guardrails": {
+            "version": "1",
+            "focus": {
+                "is_enabled": false
+            },
+            "prompt_injection": {
+                "is_enabled": false
+            },
+            "content": {
+                "execution_mode": "streaming",
+                "config": {
+                    "sexual": {
+                        "is_enabled": false,
+                        "threshold": "medium"
+                    },
+                    "violence": {
+                        "is_enabled": false,
+                        "threshold": "medium"
+                    },
+                    "harassment": {
+                        "is_enabled": false,
+                        "threshold": "medium"
+                    },
+                    "self_harm": {
+                        "is_enabled": false,
+                        "threshold": "medium"
+                    },
+                    "profanity": {
+                        "is_enabled": false,
+                        "threshold": "medium"
+                    },
+                    "religion_or_politics": {
+                        "is_enabled": false,
+                        "threshold": "medium"
+                    },
+                    "medical_and_legal_information": {
+                        "is_enabled": false,
+                        "threshold": "medium"
+                    }
+                },
+                "trigger_action": {
+                    "type": "end_call"
+                }
+            },
+            "moderation": null,
+            "custom": {
+                "config": {
+                    "configs": []
+                }
+            }
+        },
+        "summary_language": null,
+        "auth": {
+            "enable_auth": false,
+            "allowlist": [],
+            "require_origin_header": false,
+            "shareable_token": null
+        },
+        "call_limits": {
+            "agent_concurrency_limit": -1,
+            "daily_limit": 100000,
+            "bursting_enabled": true
+        },
+        "ban": null,
+        "privacy": {
+            "record_voice": true,
+            "retention_days": -1,
+            "delete_transcript_and_pii": false,
+            "delete_audio": false,
+            "apply_to_existing_conversations": false,
+            "zero_retention_mode": false,
+            "conversation_history_redaction": {
+                "enabled": false,
+                "entities": []
+            }
+        },
+        "safety": {
+            "is_blocked_ivc": false,
+            "is_blocked_non_ivc": false,
+            "ignore_safety_evaluation": false
+        }
+    },
+    "phone_numbers": [],
+    "whatsapp_accounts": [],
+    "workflow": {
+        "edges": {},
+        "nodes": {
+            "start_node": {
+                "type": "start",
+                "position": {
+                    "x": 0.0,
+                    "y": 0.0
+                },
+                "edge_order": []
+            }
+        },
+        "prevent_subagent_loops": false
+    },
+    "access_info": {
+        "is_creator": true,
+        "creator_name": "wagohe7446@nyspring.com",
+        "creator_email": "wagohe7446@nyspring.com",
+        "role": "admin"
+    },
+    "tags": [],
+    "version_id": "agtvrsn_5101knqdgzrjfm7bh4arzqwcaf4n",
+    "branch_id": "agtbrch_1401knq9gp8rf3tak86nrnw015qn",
+    "main_branch_id": "agtbrch_1401knq9gp8rf3tak86nrnw015qn",
+    "coaching_settings": null,
+    "procedures": {},
+    "procedures_enabled": false,
+    "procedure_settings": {
+        "compiler_mode": "llm"
+    }
+}

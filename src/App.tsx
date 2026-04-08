@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { CampaignsPage } from "@/pages/CampaignsPage";
+import { AgentsPage } from "@/pages/AgentsPage";
 import { LiveCallsPage } from "@/pages/LiveCallsPage";
 import { ResultsPage } from "@/pages/ResultsPage";
 import { CalendarPage } from "@/pages/CalendarPage";
@@ -19,6 +20,7 @@ const App = () => (
             {/* Authenticated Dashboard Layout */}
             <Route path="/" element={<Layout />}>
                 <Route index element={<DashboardPage />} />
+                <Route path="agents" element={<AgentsPage />} />
                 <Route path="campaigns" element={<CampaignsPage />} />
                 <Route path="live" element={<LiveCallsPage />} />
                 <Route path="results" element={<ResultsPage />} />
