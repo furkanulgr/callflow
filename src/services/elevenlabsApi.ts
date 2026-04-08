@@ -1,4 +1,4 @@
-const API_BASE = '/api/elevenlabs';
+const API_BASE = 'https://api.elevenlabs.io';
 
 // The API key is usually kept in .env
 const getApiKey = () => import.meta.env.VITE_ELEVENLABS_API_KEY || 'sk_9b658588d8c07ab7c1c6de853acd5109813203687a9de61c';
