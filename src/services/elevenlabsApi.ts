@@ -206,3 +206,106 @@ export const createAgent = async (payload: CreateAgentPayload): Promise<string> 
     const data = await response.json();
     return data.agent_id;
 };
+
+export interface PhoneNumberItem {
+    phone_number_id: string;
+    phone_number: string;
+    provider: string;
+    label: string;
+}
+
+/**
+ * Fetches configured phone numbers from ElevenLabs.
+ */
+export const getPhoneNumbers = async (): Promise<PhoneNumberItem[]> => {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
+
+    const response = await fetch(`${API_BASE}/v1/convai/phone-numbers`, {
+        method: "GET",
+        headers: {
+            "xi-api-key": apiKey,
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        // Handle no config or errors gracefully
+        return [];
+    }
+
+    const data = await response.json();
+    return data.phone_numbers || [];
+};
+
+/**
+ * Fetches recent conversations.
+ */
+export const getConversations = async (agentId?: string): Promise<any[]> => {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
+    
+    // Add agent_id filter if provided
+    let url = `${API_BASE}/v1/convai/conversations`;
+    if (agentId) {
+        url += `?agent_id=${agentId}`;
+    }
+
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            "xi-api-key": apiKey
+        }
+    });
+
+    if (!response.ok) {
+        return [];
+    }
+
+    const data = await response.json();
+    return data.conversations || [];
+};
+
+/**
+ * Fetches conversation details, including transcript.
+ */
+export const getConversationDetails = async (conversationId: string): Promise<any> => {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
+
+    const response = await fetch(`${API_BASE}/v1/convai/conversations/${conversationId}`, {
+        method: "GET",
+        headers: {
+            "xi-api-key": apiKey
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Görüşme detayı alınamadı.");
+    }
+
+    return await response.json();
+};
+
+/**
+ * Fetches the raw audio for the conversation and returns a blob URL.
+ */
+export const getConversationAudio = async (conversationId: string): Promise<string> => {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
+
+    const response = await fetch(`${API_BASE}/v1/convai/conversations/${conversationId}/audio`, {
+        method: "GET",
+        headers: {
+            "xi-api-key": apiKey
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Ses kaydı alınamadı.");
+    }
+
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+};
+

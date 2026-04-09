@@ -8,6 +8,7 @@ import {
 import { cn } from "@/utils/cn";
 import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
 import { AgentPromptEditor } from "@/components/AgentPromptEditor";
+import { getPhoneNumbers, PhoneNumberItem } from "@/services/elevenlabsApi";
 
 type CampaignStatus = "active" | "paused" | "completed" | "draft";
 
@@ -56,11 +57,24 @@ export const CampaignsPage = () => {
     const [selectedCampaign, setSelectedCampaign] = useState<(typeof campaigns)[0] | null>(null);
     const [voiceDemoCampaign, setVoiceDemoCampaign] = useState<(typeof campaigns)[0] | null>(null);
 
-    // File Upload States
+    // File Upload & Config States
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [numberCount, setNumberCount] = useState<number>(0);
     const [isUploading, setIsUploading] = useState(false);
+    const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumberItem[]>([]);
+    const [selectedPhone, setSelectedPhone] = useState<string>("");
+    const [dailyLimit, setDailyLimit] = useState<number>(50);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch Phone numbers on modal open
+    useEffect(() => {
+        if (showModal && phoneNumbers.length === 0) {
+            getPhoneNumbers().then(nums => {
+                setPhoneNumbers(nums);
+                if (nums.length > 0) setSelectedPhone(nums[0].phone_number_id);
+            }).catch(console.error);
+        }
+    }, [showModal]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -346,9 +360,63 @@ export const CampaignsPage = () => {
                                 )}
                             </div>
 
+                            {/* Twilio Selection */}
+                            <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+                                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center justify-between">
+                                    <span>Twilio Numarası</span>
+                                    <span className="text-[10px] bg-slate-900 text-[#CCFF00] px-2 py-0.5 rounded-full uppercase tracking-widest">ElevenLabs</span>
+                                </label>
+                                {phoneNumbers.length > 0 ? (
+                                    <select 
+                                        className="input-base"
+                                        value={selectedPhone}
+                                        onChange={e => setSelectedPhone(e.target.value)}
+                                    >
+                                        {phoneNumbers.map(p => (
+                                            <option key={p.phone_number_id} value={p.phone_number_id}>{p.phone_number} {p.label ? `(${p.label})` : ""}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex items-start gap-3">
+                                        <XCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-xs font-bold text-orange-800">Bağlanmış numara bulunamadı.</p>
+                                            <p className="text-[10px] text-orange-600 mt-0.5 font-medium leading-relaxed">
+                                                Outbound aramalar başlatabilmek için ElevenLabs panelinden Twilio numaranızı içe aktarmanız gerekmektedir.
+                                            </p>
+                                            <button className="mt-2 text-xs font-bold bg-white text-orange-600 px-3 py-1.5 rounded-lg border border-orange-200">
+                                                Nasıl Eklenir?
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div>
-                                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Günlük Maksimum Arama</label>
-                                <input className="input-base" type="number" placeholder="100" defaultValue={50} />
+                                <label className="text-sm font-semibold text-gray-700 mb-2 block">Arama Limiti Belirle</label>
+                                <div className="grid grid-cols-4 gap-2 mb-2">
+                                    {[20, 50, 100, 500].map(limit => (
+                                        <button 
+                                            key={limit}
+                                            onClick={() => setDailyLimit(limit)}
+                                            className={cn(
+                                                "py-2 rounded-xl text-xs font-bold transition-all border",
+                                                dailyLimit === limit ? "bg-slate-900 text-[#CCFF00] border-slate-900" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            {limit}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Özel miktar:</span>
+                                    <input 
+                                        className="input-base py-1.5 text-sm" 
+                                        type="number" 
+                                        value={dailyLimit} 
+                                        onChange={(e) => setDailyLimit(parseInt(e.target.value) || 0)} 
+                                    />
+                                </div>
                             </div>
                         </div>
 
