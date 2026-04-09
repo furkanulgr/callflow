@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAgents, AgentListItem } from "@/services/elevenlabsApi";
+import { getAgents, AgentListItem, LUNA_API_KEY, LUNA_AGENT_ID } from "@/services/elevenlabsApi";
 import { BrainCircuit, Loader2, Bot, Calendar, Headphones, Settings2, X, Activity, Zap, CheckCircle2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { AgentPromptEditor } from "@/components/AgentPromptEditor";
@@ -139,7 +139,7 @@ export const AgentsPage = () => {
 
                                 <div className="flex flex-col items-end gap-1.5">
                                     <span className="text-[9px] font-black tracking-[0.2em] uppercase bg-[#CCFF00]/10 text-[#CCFF00] px-3 py-1 rounded-full border border-[#CCFF00]/20 shadow-sm">
-                                        LİDER ASİSTAN
+                                        ANA ASİSTAN
                                     </span>
                                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 rounded-md border border-emerald-500/20 shadow-sm backdrop-blur-sm">
                                         <Activity className="w-3.5 h-3.5 text-emerald-400" />
@@ -149,7 +149,7 @@ export const AgentsPage = () => {
                             </div>
 
                             <div className="relative z-10 w-full mb-8">
-                                <h3 className="text-[22px] font-black text-white mb-2 tracking-tight line-clamp-1 group-hover:text-[#CCFF00] transition-colors duration-300">LUNA (KONTROL)</h3>
+                                <h3 className="text-[22px] font-black text-white mb-2 tracking-tight line-clamp-1 group-hover:text-[#CCFF00] transition-colors duration-300">ZEYNEP (KONTROL)</h3>
 
                                 <div className="flex items-center justify-between w-full p-3 bg-slate-900/80 rounded-xl border border-slate-800 mb-4 group-hover:border-slate-700 transition-colors shadow-inner backdrop-blur-sm">
                                     <p className="text-[11px] text-slate-400 font-medium font-mono truncate text-ellipsis" title="agent_6701knh148pgfyvvsbfjeg27ps3n">
@@ -171,14 +171,14 @@ export const AgentsPage = () => {
 
                             <div className="flex flex-col gap-3 w-full mt-auto relative z-10">
                                 <button
-                                    onClick={() => setVoiceDemoAgent({ agent_id: '7c7c34c02561ee5fdda0a3c3581c505d7b5a9d4d60a41a8e8a5be1f3dffb1c43', name: 'LUNA' } as any)}
+                                    onClick={() => setVoiceDemoAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
                                     className="w-full relative group/btn flex justify-center items-center gap-2.5 py-4 bg-[#CCFF00] text-slate-950 rounded-2xl font-black text-sm tracking-wide overflow-hidden shadow-[0_8px_20px_rgba(204,255,0,0.15)] hover:shadow-[0_8px_30px_rgba(204,255,0,0.3)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]"
                                 >
-                                    <Headphones className="w-4.5 h-4.5" /> LUNA'ya Bağlan
+                                    <Headphones className="w-4.5 h-4.5" /> ZEYNEP'e Bağlan
                                 </button>
 
                                 <button
-                                    onClick={() => setEditingAgent({ agent_id: '7c7c34c02561ee5fdda0a3c3581c505d7b5a9d4d60a41a8e8a5be1f3dffb1c43', name: 'LUNA' } as any)}
+                                    onClick={() => setEditingAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
                                     className="w-full flex justify-center items-center gap-2.5 py-3.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-2xl font-bold text-sm tracking-wide hover:border-slate-700 hover:text-white hover:bg-slate-800 hover:shadow-md transition-all active:scale-[0.98]"
                                 >
                                     <Settings2 className="w-4 h-4" /> Nöral Bağları Yönet
@@ -295,7 +295,10 @@ export const AgentsPage = () => {
                         {/* Editor Component Mount */}
                         <div className="p-6 md:p-10 overflow-y-auto custom-scrollbar flex-1 bg-slate-50">
                             <div className="w-full h-full">
-                                <AgentPromptEditor agentId={editingAgent.agent_id} />
+                                <AgentPromptEditor
+                                    agentId={editingAgent.agent_id}
+                                    apiKey={editingAgent.agent_id === LUNA_AGENT_ID ? LUNA_API_KEY : undefined}
+                                />
                             </div>
                         </div>
                     </div>

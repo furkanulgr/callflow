@@ -6,9 +6,10 @@ import { cn } from "@/utils/cn";
 interface AgentPromptEditorProps {
     agentId?: string;
     agentRole?: string;
+    apiKey?: string;
 }
 
-export const AgentPromptEditor = ({ agentId, agentRole }: AgentPromptEditorProps) => {
+export const AgentPromptEditor = ({ agentId, agentRole, apiKey }: AgentPromptEditorProps) => {
     const [prompt, setPrompt] = useState("");
     const [firstMessage, setFirstMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +25,7 @@ export const AgentPromptEditor = ({ agentId, agentRole }: AgentPromptEditorProps
             setIsLoading(true);
             setError(null);
             try {
-                const configData = await getAgentConfigData(agentId);
+                const configData = await getAgentConfigData(agentId, apiKey);
                 if (isMounted) {
                     setPrompt(configData.prompt);
                     setFirstMessage(configData.firstMessage);
@@ -48,7 +49,7 @@ export const AgentPromptEditor = ({ agentId, agentRole }: AgentPromptEditorProps
         setError(null);
         setSuccess(false);
         try {
-            await updateAgentConfigData(agentId, prompt, firstMessage);
+            await updateAgentConfigData(agentId, prompt, firstMessage, apiKey);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {

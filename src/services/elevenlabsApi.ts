@@ -1,7 +1,11 @@
 const API_BASE = 'https://api.elevenlabs.io';
 
-// The API key is usually kept in .env
+// Primary API key (KEMAL, elif, Onur agents)
 const getApiKey = () => import.meta.env.VITE_ELEVENLABS_API_KEY || 'sk_9b658588d8c07ab7c1c6de853acd5109813203687a9de61c';
+
+// LUNA agent API key (separate ElevenLabs account)
+export const LUNA_API_KEY = 'sk_60baf8533b452566dbb64fc582006794f7eb3c6b3d685cd0';
+export const LUNA_AGENT_ID = 'agent_6701knh148pgfyvvsbfjeg27ps3n';
 
 export interface AgentConfig {
     agent_id: string;
@@ -19,8 +23,8 @@ export interface AgentConfig {
 /**
  * Fetches the specific agent configuration via the ElevenLabs REST API.
  */
-export const getAgentConfigData = async (agentId: string): Promise<{ prompt: string; firstMessage: string }> => {
-    const apiKey = getApiKey();
+export const getAgentConfigData = async (agentId: string, apiKeyOverride?: string): Promise<{ prompt: string; firstMessage: string }> => {
+    const apiKey = apiKeyOverride || getApiKey();
     if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
 
     const response = await fetch(`${API_BASE}/v1/convai/agents/${agentId}`, {
@@ -46,8 +50,8 @@ export const getAgentConfigData = async (agentId: string): Promise<{ prompt: str
 /**
  * Updates the prompt and first_message portion of the agent via a PATCH request.
  */
-export const updateAgentConfigData = async (agentId: string, newPrompt: string, newFirstMessage: string): Promise<void> => {
-    const apiKey = getApiKey();
+export const updateAgentConfigData = async (agentId: string, newPrompt: string, newFirstMessage: string, apiKeyOverride?: string): Promise<void> => {
+    const apiKey = apiKeyOverride || getApiKey();
     if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
 
     // Partial update payload for ElevenLabs System Prompt & First Message

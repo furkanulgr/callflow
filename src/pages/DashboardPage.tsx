@@ -6,7 +6,7 @@ import {
     Radio, CheckCircle2, CalendarCheck, Users,
     Zap, Coffee, Lightbulb, Clock, Shield,
     X, Play, Pause, Volume2, MessageSquare, Bot, User, Plus,
-    Flame, Snowflake, RefreshCw, Power, PhoneOff
+    Flame, Snowflake, RefreshCw, Power, PhoneOff, Loader2
 } from "lucide-react";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
 import { getConversations, getConversationDetails, getConversationAudio } from "@/services/elevenlabsApi";
@@ -121,7 +121,7 @@ export const DashboardPage = () => {
                 },
                 body: JSON.stringify({
                     to_number: '+905468158380',
-                    agent_id: 'agent_2201kn09ms06fykt6mmdsythacwh',
+                    agent_id: 'agent_6701knh148pgfyvvsbfjeg27ps3n',
                     agent_phone_number_id: 'phnum_7301kn0bmy1efsfakqa4a5jb6dw5'
                 })
             });
@@ -161,16 +161,16 @@ export const DashboardPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
                     {/* Card 1: Greeting */}
-                    <div className="bg-white rounded-[2rem] border border-gray-100/80 p-6 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1">
+                    <div className="bg-white rounded-2xl border border-gray-100/80 p-4 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50/80 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150"></div>
-                        <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="flex justify-between items-start mb-3 relative z-10">
                             <p className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">LUERA AI</p>
-                            <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 shadow-sm transition-all duration-500 group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-100 group-hover:shadow-md">
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 shadow-sm transition-all duration-500 group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-100 group-hover:shadow-md">
                                 <Sparkles className="w-5 h-5" />
                             </div>
                         </div>
                         <div className="relative z-10">
-                            <h3 className="text-2xl font-bold tracking-tight text-gray-900 mb-1">
+                            <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-0.5">
                                 {greeting}, Gökhan
                             </h3>
                             <p className="text-sm font-medium text-gray-500">Otonom ajanınız göreve hazır.</p>
@@ -180,10 +180,10 @@ export const DashboardPage = () => {
                     {/* Card 2: System Status */}
                     <div 
                         onClick={() => setIsAnalyticsOpen(true)}
-                        className="bg-white rounded-[2rem] border border-gray-100/80 p-6 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[160px] cursor-pointer group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(16,185,129,0.15)] hover:border-emerald-100 hover:-translate-y-1"
+                        className="bg-white rounded-2xl border border-gray-100/80 p-4 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[140px] cursor-pointer group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(16,185,129,0.15)] hover:border-emerald-100 hover:-translate-y-1"
                     >
                         <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-50/60 rounded-full blur-2xl -ml-16 -mt-16 transition-transform duration-700 group-hover:scale-150 group-hover:bg-emerald-100/50"></div>
-                        <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="flex justify-between items-start mb-3 relative z-10">
                             <div className="flex items-center gap-2 mt-1">
                                 <div className="relative flex items-center justify-center">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
@@ -191,24 +191,24 @@ export const DashboardPage = () => {
                                 </div>
                                 <p className="text-[10px] font-black text-emerald-600 tracking-[0.2em] uppercase">SİSTEM CANLI</p>
                             </div>
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-emerald-600 shadow-sm transition-transform duration-500 group-hover:rotate-[15deg] group-hover:scale-110">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-emerald-600 shadow-sm transition-transform duration-500 group-hover:rotate-[15deg] group-hover:scale-110">
                                 <Radio className="w-5 h-5" />
                             </div>
                         </div>
                         <div className="relative z-10">
-                            <h3 className="text-2xl font-bold tracking-tight text-gray-900 mb-1 group-hover:text-emerald-700 transition-colors">Arama Analizi</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-0.5 group-hover:text-emerald-700 transition-colors">Arama Analizi</h3>
                             <p className="text-sm font-medium text-gray-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">Kayıtlar & Transkriptler <ChevronRight className="w-3.5 h-3.5" /></p>
                         </div>
                     </div>
 
                     {/* Card 3: Demo Actions */}
-                    <div className="bg-slate-900 rounded-[2rem] border border-slate-800 p-6 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(204,255,0,0.2)] hover:-translate-y-1 hover:border-slate-700">
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(204,255,0,0.2)] hover:-translate-y-1 hover:border-slate-700">
                         <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-10 -mb-10 transition-transform duration-1000 group-hover:scale-[1.8] group-hover:bg-[#CCFF00]/15 pointer-events-none"></div>
-                        <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="flex justify-between items-start mb-3 relative z-10">
                             <p className="text-[10px] font-black text-[#CCFF00] tracking-[0.2em] uppercase mt-1 flex items-center gap-1.5 shadow-[#CCFF00]">
                                 <Zap className="w-3.5 h-3.5 fill-[#CCFF00]" /> HIZLI AKSİYON
                             </p>
-                            <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shadow-inner transition-colors duration-500 group-hover:text-white group-hover:bg-slate-700/50">
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shadow-inner transition-colors duration-500 group-hover:text-white group-hover:bg-slate-700/50">
                                 <Bot className="w-5 h-5" />
                             </div>
                         </div>
@@ -235,16 +235,16 @@ export const DashboardPage = () => {
                     </div>
 
                     {/* Card 4: Appointments */}
-                    <div className="bg-white rounded-[2rem] border border-gray-100/80 p-6 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(59,130,246,0.15)] hover:border-blue-100 hover:-translate-y-1">
+                    <div className="bg-white rounded-2xl border border-gray-100/80 p-4 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(59,130,246,0.15)] hover:border-blue-100 hover:-translate-y-1">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/60 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150 group-hover:bg-blue-100/50"></div>
-                        <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="flex justify-between items-start mb-3 relative z-10">
                             <p className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">GÜNLÜK HEDEF</p>
-                            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-blue-600 shadow-sm transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-blue-600 shadow-sm transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110">
                                 <Target className="w-5 h-5" />
                             </div>
                         </div>
                         <div className="relative z-10">
-                            <h3 className="text-2xl font-bold tracking-tight text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">12 Randevu Toplandı</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-0.5 group-hover:text-blue-700 transition-colors">12 Randevu Toplandı</h3>
                             <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5"><TrendingUp className="w-4 h-4 text-blue-500" /> <span className="text-blue-600 font-bold">%45</span> dönüşüm oranı</p>
                         </div>
                     </div>
@@ -786,100 +786,153 @@ const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
     };
 
     return (
-        <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] ring-1 ring-white/20 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col md:flex-row max-h-[85vh] ring-1 ring-black/5 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             
             {/* Left Sidebar: Call List */}
-            <div className="w-full md:w-[320px] bg-slate-50 border-r border-gray-100 flex flex-col shrink-0 max-h-[40vh] md:max-h-none">
-                <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-white">
-                    <h3 className="font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                        <Radio className="w-4 h-4 text-emerald-500" /> API Çağrıları
-                    </h3>
-                    {loading && <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />}
-                </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-                    {loading && calls.length === 0 && <p className="text-sm text-gray-400 p-4 font-medium text-center">Veriler çekiliyor...</p>}
-                    {!loading && calls.length === 0 && <p className="text-sm text-gray-400 p-4 font-medium text-center">Kayıtlı aranma yok.</p>}
-                    {calls.map((c: any) => (
-                        <div key={c.conversation_id} onClick={() => fetchDetail(c.conversation_id)} className="p-3 bg-white border border-gray-100 rounded-xl hover:border-emerald-200 cursor-pointer transition-all shadow-sm">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider", c.status === "done" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>
-                                    {c.status}
-                                </span>
-                            </div>
-                            <p className="text-xs text-gray-500 font-mono line-clamp-1 mt-1">{c.conversation_id}</p>
-                            <p className="text-[10px] text-gray-400 mt-2">{new Date(c.start_time_unix_secs * 1000).toLocaleString('tr-TR')}</p>
+            <div className="w-full md:w-[340px] bg-white border-r border-gray-100 flex flex-col shrink-0 max-h-[40vh] md:max-h-none">
+                <div className="px-6 py-5 border-b border-gray-100 bg-white">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h3 className="font-bold text-slate-900 tracking-tight text-lg">Arama Kayıtları</h3>
+                            <p className="text-xs text-slate-400 mt-0.5">{calls.length} görüşme kaydı</p>
                         </div>
-                    ))}
+                        {loading && <RefreshCw className="w-4 h-4 text-slate-400 animate-spin" />}
+                    </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
+                    {loading && calls.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                            <Loader2 className="w-6 h-6 animate-spin mb-3" />
+                            <p className="text-sm font-medium">Veriler yükleniyor...</p>
+                        </div>
+                    )}
+                    {!loading && calls.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                            <Phone className="w-8 h-8 mb-3 opacity-30" />
+                            <p className="text-sm font-medium">Henüz kayıt yok</p>
+                        </div>
+                    )}
+                    {calls.map((c: any, index: number) => {
+                        const callDate = new Date(c.start_time_unix_secs * 1000);
+                        const timeStr = callDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = callDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                        const isSelected = selectedDetail?.conversation_id === c.conversation_id;
+                        const isDone = c.status === "done";
+                        
+                        return (
+                            <div 
+                                key={c.conversation_id} 
+                                onClick={() => fetchDetail(c.conversation_id)} 
+                                className={cn(
+                                    "px-4 py-3 rounded-xl cursor-pointer transition-all flex items-center gap-3",
+                                    isSelected 
+                                        ? "bg-slate-900 text-white shadow-lg" 
+                                        : "hover:bg-gray-50 text-slate-700"
+                                )}
+                            >
+                                <div className={cn(
+                                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                                    isSelected ? "bg-[#CCFF00]/20" : isDone ? "bg-emerald-50" : "bg-amber-50"
+                                )}>
+                                    <Phone className={cn(
+                                        "w-4 h-4",
+                                        isSelected ? "text-[#CCFF00]" : isDone ? "text-emerald-500" : "text-amber-500"
+                                    )} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className={cn("text-sm font-semibold truncate", isSelected ? "text-white" : "text-slate-800")}>
+                                            Görüşme #{index + 1}
+                                        </p>
+                                        <span className={cn(
+                                            "text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase shrink-0",
+                                            isSelected 
+                                                ? "bg-emerald-400/20 text-emerald-300" 
+                                                : isDone ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                                        )}>
+                                            {isDone ? "✓" : "..."}
+                                        </span>
+                                    </div>
+                                    <p className={cn("text-[11px] mt-0.5", isSelected ? "text-slate-300" : "text-slate-400")}>
+                                        {dateStr} · {timeStr}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
             {/* Right Side: Detail */}
-            <div className="flex-1 bg-white flex flex-col relative overflow-hidden">
-                <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors z-50">
+            <div className="flex-1 bg-gray-50/50 flex flex-col relative overflow-hidden">
+                <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors z-50">
                     <X className="w-5 h-5" />
                 </button>
 
                 {!selectedDetail ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                        <Sparkles className="w-10 h-10 mb-3 opacity-20" />
-                        <p className="font-medium">Detayları görmek için listeye tıklayın.</p>
+                        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                            <Sparkles className="w-7 h-7 text-gray-300" />
+                        </div>
+                        <p className="font-semibold text-slate-500">Bir görüşme seçin</p>
+                        <p className="text-sm text-slate-400 mt-1">Detayları ve transkripti görüntüleyin</p>
                     </div>
                 ) : (
-                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
                         <div className="mb-6">
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Görüşme Analizi</h2>
-                            <p className="text-sm text-gray-500 font-mono">{selectedDetail.conversation_id}</p>
+                            <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Görüşme Analizi</h2>
+                            <p className="text-xs text-slate-400 font-mono truncate">{selectedDetail.conversation_id}</p>
                         </div>
 
                         {/* Audio Player Row */}
-                        <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white shadow-xl relative overflow-hidden group mb-8">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-transform group-hover:scale-110 duration-700"></div>
-                            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
-                                <Volume2 className="w-4 h-4 text-[#CCFF00]" /> ElevenLabs Ses Kaydı
+                        <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden group mb-6">
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
+                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Volume2 className="w-3.5 h-3.5 text-[#CCFF00]" /> Ses Kaydı
                             </h3>
-                            <div className="flex items-center gap-6 relative z-10">
+                            <div className="flex items-center gap-4 relative z-10">
                                 {audioUrl ? (
                                     <>
                                         <audio ref={audioRef} src={audioUrl} onEnded={() => setAudioPlaying(false)} className="hidden" />
-                                        <button onClick={toggleAudio} className="w-12 h-12 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-[#CCFF00]/20">
-                                            {audioPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
+                                        <button onClick={toggleAudio} className="w-10 h-10 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg">
+                                            {audioPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
                                         </button>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-[3px] h-10 w-full opacity-80 overflow-hidden">
-                                                {Array.from({ length: 90 }).map((_, i) => (
-                                                    <div key={i} className="flex-1 bg-white rounded-full transition-all duration-300" style={{ height: `${10 + Math.random() * 90}%`, opacity: audioPlaying ? Math.random() * 0.5 + 0.5 : 0.2 }} />
+                                            <div className="flex items-center gap-[2px] h-8 w-full overflow-hidden">
+                                                {Array.from({ length: 70 }).map((_, i) => (
+                                                    <div key={i} className="flex-1 bg-white/30 rounded-full transition-all duration-300" style={{ height: `${10 + Math.random() * 90}%`, opacity: audioPlaying ? Math.random() * 0.5 + 0.5 : 0.15 }} />
                                                 ))}
                                             </div>
                                         </div>
                                     </>
                                 ) : (
-                                    <p className="text-sm text-slate-400 font-medium">Bu görüşme için ses kaydı çekilemiyor.</p>
+                                    <p className="text-sm text-slate-500 font-medium">Bu görüşme için ses kaydı mevcut değil.</p>
                                 )}
                             </div>
                         </div>
 
                         {/* Transcript Row */}
-                        <div className="bg-white rounded-[1.5rem] border border-gray-200/60 p-6 shadow-sm">
-                            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-6">
-                                <MessageSquare className="w-4 h-4 text-gray-400" /> Transkript
+                        <div className="bg-white rounded-2xl border border-gray-200/60 p-5 shadow-sm">
+                            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-5">
+                                <MessageSquare className="w-3.5 h-3.5 text-gray-400" /> Transkript
                             </h3>
                             
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {selectedDetail.transcript?.map((msg: any, i: number) => {
                                     const isAgent = msg.role === "agent";
                                     return (
-                                        <div key={i} className={cn("flex gap-4", !isAgent && "flex-row-reverse")}>
-                                            <div className={cn("w-10 h-10 rounded-2xl flex flex-shrink-0 items-center justify-center shadow-md", isAgent ? "bg-slate-900" : "bg-blue-50 border border-blue-100")}>
-                                                {isAgent ? <Bot className="w-5 h-5 text-[#CCFF00]" /> : <User className="w-5 h-5 text-blue-600" />}
+                                        <div key={i} className={cn("flex gap-3", !isAgent && "flex-row-reverse")}>
+                                            <div className={cn("w-8 h-8 rounded-xl flex flex-shrink-0 items-center justify-center", isAgent ? "bg-slate-900" : "bg-blue-50 border border-blue-100")}>
+                                                {isAgent ? <Bot className="w-4 h-4 text-[#CCFF00]" /> : <User className="w-4 h-4 text-blue-600" />}
                                             </div>
-                                            <div className={cn("rounded-[1.5rem] p-4 px-5 text-[15px] font-medium max-w-[85%] leading-relaxed", isAgent ? "bg-gray-100 text-gray-800 border border-gray-200/50 rounded-tl-sm" : "bg-blue-600 text-white rounded-tr-sm shadow-md")}>
+                                            <div className={cn("rounded-2xl p-3 px-4 text-sm font-medium max-w-[80%] leading-relaxed", isAgent ? "bg-gray-50 text-gray-800 rounded-tl-md" : "bg-blue-600 text-white rounded-tr-md shadow-sm")}>
                                                 {msg.message || msg.text || "(Boş mesaj)"}
                                             </div>
                                         </div>
                                     );
                                 })}
                                 {!selectedDetail.transcript?.length && (
-                                    <p className="text-sm text-gray-500">Transkript bulunamadı.</p>
+                                    <p className="text-sm text-gray-400 text-center py-4">Transkript bulunamadı.</p>
                                 )}
                             </div>
                         </div>
