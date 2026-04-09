@@ -9,6 +9,7 @@ import {
     Flame, Snowflake, RefreshCw, Power, PhoneOff
 } from "lucide-react";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
+import { getConversations, getConversationDetails, getConversationAudio } from "@/services/elevenlabsApi";
 
 /* ───── DATA ───── */
 const recentCalls = [
@@ -105,6 +106,7 @@ export const DashboardPage = () => {
     const [localCallQueue, setLocalCallQueue] = useState(INITIAL_CALL_QUEUE);
     const [isNewCallModalOpen, setIsNewCallModalOpen] = useState(false);
     const [isDirectCallModalOpen, setIsDirectCallModalOpen] = useState(false);
+    const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
     const [isCallingNow, setIsCallingNow] = useState(false);
     const [newCallForm, setNewCallForm] = useState({ name: "", phone: "", reason: "" });
 
@@ -159,96 +161,91 @@ export const DashboardPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
                     {/* Card 1: Greeting */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[140px]">
-                        <div className="absolute top-4 right-4 flex flex-col items-center gap-1.5">
-                            <div className="flex gap-1">
-                                <div className="w-1 h-1 rounded-full bg-gray-300"></div>
-                                <div className="w-4 h-1 rounded-full bg-slate-900"></div>
-                                <div className="w-1 h-1 rounded-full bg-gray-300"></div>
-                            </div>
-                            <div className="w-10 h-10 rounded-xl bg-slate-900 shadow-md flex items-center justify-center">
-                                <Coffee className="w-4 h-4 text-[#CCFF00]" />
+                    <div className="bg-white rounded-[2rem] border border-gray-100/80 p-6 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50/80 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150"></div>
+                        <div className="flex justify-between items-start mb-6 relative z-10">
+                            <p className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">LUERA AI</p>
+                            <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 shadow-sm transition-all duration-500 group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-100 group-hover:shadow-md">
+                                <Sparkles className="w-5 h-5" />
                             </div>
                         </div>
-                        <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6">LUERA</p>
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-1.5 mb-1">
+                        <div className="relative z-10">
+                            <h3 className="text-2xl font-bold tracking-tight text-gray-900 mb-1">
                                 {greeting}, Gökhan
                             </h3>
-                            <p className="text-xs font-medium text-gray-400">AI asistanınız aktif çalışıyor</p>
+                            <p className="text-sm font-medium text-gray-500">Otonom ajanınız göreve hazır.</p>
                         </div>
                     </div>
 
                     {/* Card 2: System Status */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[140px]">
-                        <div className="absolute top-4 right-4 flex flex-col items-center gap-1.5">
-                            <div className="flex gap-1">
-                                <div className="w-1 h-1 rounded-full bg-gray-300"></div>
-                                <div className="w-4 h-1 rounded-full bg-slate-900"></div>
+                    <div 
+                        onClick={() => setIsAnalyticsOpen(true)}
+                        className="bg-white rounded-[2rem] border border-gray-100/80 p-6 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[160px] cursor-pointer group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(16,185,129,0.15)] hover:border-emerald-100 hover:-translate-y-1"
+                    >
+                        <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-50/60 rounded-full blur-2xl -ml-16 -mt-16 transition-transform duration-700 group-hover:scale-150 group-hover:bg-emerald-100/50"></div>
+                        <div className="flex justify-between items-start mb-6 relative z-10">
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className="relative flex items-center justify-center">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                    <div className="absolute w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75"></div>
+                                </div>
+                                <p className="text-[10px] font-black text-emerald-600 tracking-[0.2em] uppercase">SİSTEM CANLI</p>
                             </div>
-                            <div className="w-10 h-10 rounded-xl bg-slate-900 shadow-md flex items-center justify-center">
-                                <Radio className="w-4 h-4 text-[#CCFF00]" />
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-emerald-600 shadow-sm transition-transform duration-500 group-hover:rotate-[15deg] group-hover:scale-110">
+                                <Radio className="w-5 h-5" />
                             </div>
                         </div>
-                        <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6">SİSTEM DURUMU</p>
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Kuyruk Aktif</h3>
-                            <p className="text-xs font-medium text-gray-400">Arka planda {localCallQueue.length} numara bekliyor</p>
+                        <div className="relative z-10">
+                            <h3 className="text-2xl font-bold tracking-tight text-gray-900 mb-1 group-hover:text-emerald-700 transition-colors">Arama Analizi</h3>
+                            <p className="text-sm font-medium text-gray-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">Kayıtlar & Transkriptler <ChevronRight className="w-3.5 h-3.5" /></p>
                         </div>
                     </div>
 
                     {/* Card 3: Demo Actions */}
-                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-lg shadow-slate-900/20 relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-300 text-left">
-                        {/* Glow Effect */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#CCFF00]/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-
-                        <div className="flex justify-between items-start mb-2 relative z-10">
-                            <p className="text-[11px] font-bold text-[#CCFF00] tracking-widest uppercase flex items-center gap-1.5 mt-1">
-                                <Sparkles className="w-3.5 h-3.5" /> CANLI DEMO
+                    <div className="bg-slate-900 rounded-[2rem] border border-slate-800 p-6 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(204,255,0,0.2)] hover:-translate-y-1 hover:border-slate-700">
+                        <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-10 -mb-10 transition-transform duration-1000 group-hover:scale-[1.8] group-hover:bg-[#CCFF00]/15 pointer-events-none"></div>
+                        <div className="flex justify-between items-start mb-6 relative z-10">
+                            <p className="text-[10px] font-black text-[#CCFF00] tracking-[0.2em] uppercase mt-1 flex items-center gap-1.5 shadow-[#CCFF00]">
+                                <Zap className="w-3.5 h-3.5 fill-[#CCFF00]" /> HIZLI AKSİYON
                             </p>
-                            <div className="w-8 h-8 rounded-lg bg-[#CCFF00]/10 flex items-center justify-center">
-                                <Bot className="w-4 h-4 text-[#CCFF00]" />
+                            <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shadow-inner transition-colors duration-500 group-hover:text-white group-hover:bg-slate-700/50">
+                                <Bot className="w-5 h-5" />
                             </div>
                         </div>
-
-                        <div className="relative z-10 flex gap-2 mt-auto">
+                        <div className="relative z-10 flex gap-3 w-full mt-auto">
                             <button
                                 onClick={() => setIsNewCallModalOpen(true)}
-                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-2 px-2 flex flex-col items-center justify-center gap-1 transition-colors"
+                                className="flex-1 bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 hover:border-white/20 rounded-xl py-3 px-3 flex items-center justify-center gap-2 transition-all text-white hover:text-[#CCFF00]"
                             >
-                                <Mic className="w-4 h-4 text-white" />
-                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Tarayıcı</span>
+                                <Mic className="w-4 h-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Planla</span>
                             </button>
                             
                             <button
                                 onClick={handleQuickCall}
                                 disabled={isCallingNow}
-                                className="flex-1 bg-[#CCFF00] hover:bg-[#bbf000] border border-[#aadd00] rounded-xl py-2 px-2 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                                className="flex-[1.5] bg-[#CCFF00] hover:bg-[#d4ff33] active:bg-[#bbf000] rounded-xl py-3 px-3 flex items-center justify-center gap-2 transition-all text-slate-900 shadow-[0_0_15px_rgba(204,255,0,0.3)] hover:shadow-[0_0_25px_rgba(204,255,0,0.5)] disabled:opacity-50 disabled:cursor-wait"
                             >
-                                <Phone className="w-4 h-4 text-slate-900" />
-                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-wider">
-                                    {isCallingNow ? "Aranıyor..." : "Telefon"}
+                                <Phone className="w-4 h-4 fill-slate-900" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    {isCallingNow ? "Aranıyor..." : "Hemen Ara"}
                                 </span>
                             </button>
                         </div>
                     </div>
 
                     {/* Card 4: Appointments */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[140px]">
-                        <div className="absolute top-4 right-4 flex flex-col items-center gap-1.5">
-                            <div className="flex gap-1">
-                                <div className="w-1 h-1 rounded-full bg-gray-300"></div>
-                                <div className="w-4 h-1 rounded-full bg-slate-900"></div>
-                                <div className="w-1 h-1 rounded-full bg-gray-300"></div>
-                            </div>
-                            <div className="w-10 h-10 rounded-xl bg-slate-900 shadow-md flex items-center justify-center">
-                                <CalendarCheck className="w-4 h-4 text-[#CCFF00]" />
+                    <div className="bg-white rounded-[2rem] border border-gray-100/80 p-6 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(59,130,246,0.15)] hover:border-blue-100 hover:-translate-y-1">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/60 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150 group-hover:bg-blue-100/50"></div>
+                        <div className="flex justify-between items-start mb-6 relative z-10">
+                            <p className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">GÜNLÜK HEDEF</p>
+                            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-blue-600 shadow-sm transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110">
+                                <Target className="w-5 h-5" />
                             </div>
                         </div>
-                        <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6">RANDEVU</p>
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-900 tracking-tight mb-1">12 randevu alındı</h3>
-                            <p className="text-xs font-bold text-blue-500 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> %45 dönüşüm oranı</p>
+                        <div className="relative z-10">
+                            <h3 className="text-2xl font-bold tracking-tight text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">12 Randevu Toplandı</h3>
+                            <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5"><TrendingUp className="w-4 h-4 text-blue-500" /> <span className="text-blue-600 font-bold">%45</span> dönüşüm oranı</p>
                         </div>
                     </div>
 
@@ -402,7 +399,7 @@ export const DashboardPage = () => {
             {/* ── CALL DETAIL MODAL ── */}
             {selectedCall && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/20" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/20" onClick={(e) => e.stopPropagation()}>
 
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white relative z-10">
@@ -429,28 +426,28 @@ export const DashboardPage = () => {
                         </div>
 
                         {/* Scrollable Content */}
-                        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-gray-50/30 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8 bg-gray-50/30 custom-scrollbar">
 
-                            {/* Audio Player Card */}
+                                {/* Audio Player Card */}
                             <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white shadow-xl relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-transform group-hover:scale-110 duration-700"></div>
                                 <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                     <Volume2 className="w-4 h-4 text-[#CCFF00]" /> Görüşme Kaydı (Retell AI)
                                 </h3>
                                 <div className="flex items-center gap-6 relative z-10">
-                                    <button className="w-14 h-14 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-[#CCFF00]/20">
-                                        <Play className="w-6 h-6 ml-1" />
+                                    <button className="w-12 h-12 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-[#CCFF00]/20">
+                                        <Play className="w-5 h-5 ml-1" />
                                     </button>
                                     <div className="flex-1 min-w-0">
                                         {/* Fake Waveform */}
-                                        <div className="flex items-center gap-1 h-10 w-full opacity-60">
-                                            {Array.from({ length: 60 }).map((_, i) => {
-                                                const height = 20 + Math.random() * 80;
+                                        <div className="flex items-center gap-1 h-12 w-full opacity-80 overflow-hidden px-1">
+                                            {Array.from({ length: 90 }).map((_, i) => {
+                                                const height = 15 + Math.random() * 85;
                                                 return (
                                                     <div
                                                         key={i}
-                                                        className="flex-1 bg-white rounded-full transition-all duration-300 hover:bg-[#CCFF00] hover:h-full cursor-pointer"
-                                                        style={{ height: `${height}%`, opacity: Math.random() * 0.5 + 0.3 }}
+                                                        className="flex-1 bg-white rounded-full transition-all duration-300 hover:bg-[#CCFF00] cursor-pointer"
+                                                        style={{ height: `${height}%`, opacity: Math.random() * 0.4 + 0.3, minWidth: "2px" }}
                                                     />
                                                 );
                                             })}
@@ -482,28 +479,28 @@ export const DashboardPage = () => {
                                 <div className="space-y-5">
                                     {/* Fake Chat Messages */}
                                     <div className="flex gap-4">
-                                        <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-md">
+                                        <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-md mt-1">
                                             <Bot className="w-5 h-5 text-[#CCFF00]" />
                                         </div>
-                                        <div className="bg-gray-100 rounded-2xl rounded-tl-sm p-4 text-sm text-gray-800 font-medium max-w-[85%] leading-relaxed border border-gray-200/50">
+                                        <div className="bg-gray-100 rounded-[1.5rem] rounded-tl-sm p-4 px-5 text-[15px] text-gray-800 font-medium max-w-[85%] leading-relaxed border border-gray-200/50">
                                             Merhaba {selectedCall.name}, ben LUERA. Dünkü görüşmemize istinaden sizi arıyorum. Nasılsınız?
                                         </div>
                                     </div>
 
                                     <div className="flex gap-4 flex-row-reverse">
-                                        <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
                                             <User className="w-5 h-5 text-blue-600" />
                                         </div>
-                                        <div className="bg-blue-600 text-white rounded-2xl rounded-tr-sm p-4 text-sm font-medium max-w-[85%] shadow-md leading-relaxed">
+                                        <div className="bg-blue-600 text-white rounded-[1.5rem] rounded-tr-sm p-4 px-5 text-[15px] font-medium max-w-[85%] shadow-md leading-relaxed">
                                             İyiyim teşekkürler. Evet paketlerinizi inceledim. Fiyatlar biraz yüksek geldi ama içeriği çok beğendim.
                                         </div>
                                     </div>
 
                                     <div className="flex gap-4">
-                                        <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-md">
+                                        <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-md mt-1">
                                             <Bot className="w-5 h-5 text-[#CCFF00]" />
                                         </div>
-                                        <div className="bg-gray-100 rounded-2xl rounded-tl-sm p-4 text-sm text-gray-800 font-medium max-w-[85%] leading-relaxed border border-gray-200/50">
+                                        <div className="bg-gray-100 rounded-[1.5rem] rounded-tl-sm p-4 px-5 text-[15px] text-gray-800 font-medium max-w-[85%] leading-relaxed border border-gray-200/50">
                                             Anlıyorum. İçeriği beğenmeniz harika. Eğer isterseniz, bütçenize daha uygun olan Başlangıç paketimizi size detaylıca anlatabilirim. Ne dersiniz?
                                         </div>
                                     </div>
@@ -519,6 +516,13 @@ export const DashboardPage = () => {
             {isNewCallModalOpen && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <LiveTestModal onClose={() => setIsNewCallModalOpen(false)} />
+                </div>
+            )}
+
+            {/* ── ELEVENLABS ANALYTICS MODAL ── */}
+            {isAnalyticsOpen && (
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <AnalyticsModal onClose={() => setIsAnalyticsOpen(false)} />
                 </div>
             )}
 
@@ -726,6 +730,162 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
 
             </div>
             
+        </div>
+    );
+};
+
+// ── ELEVENLABS ANALYTICS MODAL COMPONENT ──
+const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
+    const [calls, setCalls] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [audioPlaying, setAudioPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        getConversations()
+            .then(data => {
+                setCalls(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Failed to load generic calls from ElevenLabs", err);
+                setLoading(false);
+            });
+    }, []);
+
+    const fetchDetail = async (callId: string) => {
+        setSelectedDetail(null);
+        setAudioUrl(null);
+        try {
+            const detail = await getConversationDetails(callId);
+            setSelectedDetail(detail);
+            
+            // Try fetching audio if available
+            try {
+                const audio = await getConversationAudio(callId);
+                setAudioUrl(audio);
+            } catch (aErr) {
+                console.log("No audio available");
+            }
+        } catch (e) {
+            alert("Arama detayı alınamadı!");
+        }
+    };
+
+    const toggleAudio = () => {
+        if (!audioRef.current) return;
+        if (audioPlaying) {
+            audioRef.current.pause();
+            setAudioPlaying(false);
+        } else {
+            audioRef.current.play();
+            setAudioPlaying(true);
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] ring-1 ring-white/20 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            
+            {/* Left Sidebar: Call List */}
+            <div className="w-full md:w-[320px] bg-slate-50 border-r border-gray-100 flex flex-col shrink-0 max-h-[40vh] md:max-h-none">
+                <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-white">
+                    <h3 className="font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <Radio className="w-4 h-4 text-emerald-500" /> API Çağrıları
+                    </h3>
+                    {loading && <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />}
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+                    {loading && calls.length === 0 && <p className="text-sm text-gray-400 p-4 font-medium text-center">Veriler çekiliyor...</p>}
+                    {!loading && calls.length === 0 && <p className="text-sm text-gray-400 p-4 font-medium text-center">Kayıtlı aranma yok.</p>}
+                    {calls.map((c: any) => (
+                        <div key={c.conversation_id} onClick={() => fetchDetail(c.conversation_id)} className="p-3 bg-white border border-gray-100 rounded-xl hover:border-emerald-200 cursor-pointer transition-all shadow-sm">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider", c.status === "done" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>
+                                    {c.status}
+                                </span>
+                            </div>
+                            <p className="text-xs text-gray-500 font-mono line-clamp-1 mt-1">{c.conversation_id}</p>
+                            <p className="text-[10px] text-gray-400 mt-2">{new Date(c.start_time_unix_secs * 1000).toLocaleString('tr-TR')}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Right Side: Detail */}
+            <div className="flex-1 bg-white flex flex-col relative overflow-hidden">
+                <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors z-50">
+                    <X className="w-5 h-5" />
+                </button>
+
+                {!selectedDetail ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                        <Sparkles className="w-10 h-10 mb-3 opacity-20" />
+                        <p className="font-medium">Detayları görmek için listeye tıklayın.</p>
+                    </div>
+                ) : (
+                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Görüşme Analizi</h2>
+                            <p className="text-sm text-gray-500 font-mono">{selectedDetail.conversation_id}</p>
+                        </div>
+
+                        {/* Audio Player Row */}
+                        <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white shadow-xl relative overflow-hidden group mb-8">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-transform group-hover:scale-110 duration-700"></div>
+                            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                                <Volume2 className="w-4 h-4 text-[#CCFF00]" /> ElevenLabs Ses Kaydı
+                            </h3>
+                            <div className="flex items-center gap-6 relative z-10">
+                                {audioUrl ? (
+                                    <>
+                                        <audio ref={audioRef} src={audioUrl} onEnded={() => setAudioPlaying(false)} className="hidden" />
+                                        <button onClick={toggleAudio} className="w-12 h-12 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-[#CCFF00]/20">
+                                            {audioPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
+                                        </button>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-[3px] h-10 w-full opacity-80 overflow-hidden">
+                                                {Array.from({ length: 90 }).map((_, i) => (
+                                                    <div key={i} className="flex-1 bg-white rounded-full transition-all duration-300" style={{ height: `${10 + Math.random() * 90}%`, opacity: audioPlaying ? Math.random() * 0.5 + 0.5 : 0.2 }} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-slate-400 font-medium">Bu görüşme için ses kaydı çekilemiyor.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Transcript Row */}
+                        <div className="bg-white rounded-[1.5rem] border border-gray-200/60 p-6 shadow-sm">
+                            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-6">
+                                <MessageSquare className="w-4 h-4 text-gray-400" /> Transkript
+                            </h3>
+                            
+                            <div className="space-y-4">
+                                {selectedDetail.transcript?.map((msg: any, i: number) => {
+                                    const isAgent = msg.role === "agent";
+                                    return (
+                                        <div key={i} className={cn("flex gap-4", !isAgent && "flex-row-reverse")}>
+                                            <div className={cn("w-10 h-10 rounded-2xl flex flex-shrink-0 items-center justify-center shadow-md", isAgent ? "bg-slate-900" : "bg-blue-50 border border-blue-100")}>
+                                                {isAgent ? <Bot className="w-5 h-5 text-[#CCFF00]" /> : <User className="w-5 h-5 text-blue-600" />}
+                                            </div>
+                                            <div className={cn("rounded-[1.5rem] p-4 px-5 text-[15px] font-medium max-w-[85%] leading-relaxed", isAgent ? "bg-gray-100 text-gray-800 border border-gray-200/50 rounded-tl-sm" : "bg-blue-600 text-white rounded-tr-sm shadow-md")}>
+                                                {msg.message || msg.text || "(Boş mesaj)"}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {!selectedDetail.transcript?.length && (
+                                    <p className="text-sm text-gray-500">Transkript bulunamadı.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
