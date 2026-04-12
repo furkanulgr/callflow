@@ -116,13 +116,13 @@ export const DashboardPage = () => {
             const response = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound-call', {
                 method: 'POST',
                 headers: {
-                    'xi-api-key': 'sk_bc8170ba57513f945e680076d3d7888b7660400643b1dd9d',
+                    'xi-api-key': import.meta.env.VITE_LUNA_API_KEY,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    to_number: '+905468158380',
-                    agent_id: 'agent_6701knh148pgfyvvsbfjeg27ps3n',
-                    agent_phone_number_id: 'phnum_7301kn0bmy1efsfakqa4a5jb6dw5'
+                    to_number: import.meta.env.VITE_QUICK_CALL_TEST_NUMBER,
+                    agent_id: import.meta.env.VITE_LUNA_AGENT_ID,
+                    agent_phone_number_id: import.meta.env.VITE_ELEVENLABS_PHONE_NUMBER_ID
                 })
             });
             if (response.ok) alert("🤖 Otonom Arama Başlatıldı! Lütfen telefonu açınız.");

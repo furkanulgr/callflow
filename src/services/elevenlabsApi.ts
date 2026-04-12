@@ -1,11 +1,10 @@
 const API_BASE = 'https://api.elevenlabs.io';
 
-// Primary API key (KEMAL, elif, Onur agents)
-const getApiKey = () => import.meta.env.VITE_ELEVENLABS_API_KEY || 'sk_9b658588d8c07ab7c1c6de853acd5109813203687a9de61c';
+const getApiKey = () => import.meta.env.VITE_ELEVENLABS_API_KEY as string;
 
-// LUNA agent API key (separate ElevenLabs account)
-export const LUNA_API_KEY = 'sk_60baf8533b452566dbb64fc582006794f7eb3c6b3d685cd0';
-export const LUNA_AGENT_ID = 'agent_6701knh148pgfyvvsbfjeg27ps3n';
+// LUNA agent — separate ElevenLabs account (loaded from env)
+export const LUNA_API_KEY = import.meta.env.VITE_LUNA_API_KEY as string;
+export const LUNA_AGENT_ID = import.meta.env.VITE_LUNA_AGENT_ID as string;
 
 export interface AgentConfig {
     agent_id: string;

@@ -117,7 +117,7 @@ export const CampaignsPage = () => {
             appointments: 0,
             createdAt: new Date().toLocaleDateString("tr-TR", { day: 'numeric', month: 'long', year: 'numeric' }),
             progress: 0,
-            agentId: "agent_6701knh148pgfyvvsbfjeg27ps3n", // Default
+            agentId: import.meta.env.VITE_LUNA_AGENT_ID || "",
             agentRole: "Genel Asistan"
         };
 
