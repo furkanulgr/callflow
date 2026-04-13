@@ -11,28 +11,59 @@ import {
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
 import { getConversations, getConversationDetails, getConversationAudio } from "@/services/elevenlabsApi";
 
-/* ───── DATA ───── */
-const recentCalls = [
-    { id: 1, name: "Ahmet Yılmaz (TechCorp)", phone: "+90 532 111 22 33", type: "incoming" as const, status: "answered" as const, tag: "hot" as const, duration: 245, time: new Date(Date.now() - 300_000), summary: "Randevu talebi onaylandı. Yıllık 50.000$ Enterprise paketi ile ilgileniyor." },
-    { id: 2, name: "Elif Demir (Vanguard AI)", phone: "+90 533 222 33 44", type: "outgoing" as const, status: "answered" as const, tag: "warm" as const, duration: 180, time: new Date(Date.now() - 1_200_000), summary: "API dökümanları iletildi, teknik ekip değerlendirip cuma tekrar aranacak." },
-    { id: 3, name: "Bilinmeyen Numaralar", phone: "+90 534 333 44 55", type: "incoming" as const, status: "missed" as const, tag: "cold" as const, duration: 0, time: new Date(Date.now() - 3_600_000), summary: "Cevapsız — Luera tarafından otomatik ikinci arama kuyruğuna alındı." },
-    { id: 4, name: "Mehmet Kaya (Global Lojistik)", phone: "+90 535 444 55 66", type: "outgoing" as const, status: "answered" as const, tag: "hot" as const, duration: 320, time: new Date(Date.now() - 7_200_000), summary: "Otomasyon demosu sunuldu. Yönetim kurulu onayı bekleniyor, kapanış ihtimali %80." },
-    { id: 5, name: "Ayşe Çelik (Nexus Finans)", phone: "+90 536 555 66 77", type: "incoming" as const, status: "answered" as const, tag: "cold" as const, duration: 95, time: new Date(Date.now() - 14_400_000), summary: "Entegrasyon süreci hak. bilgi alındı, ilgili dökümanlar mail olarak gönderildi." },
-];
+/* ───── TYPES ───── */
+type CallTag = "hot" | "warm" | "cold";
+type CallType = "incoming" | "outgoing";
+type CallStatus = "answered" | "missed";
 
-const INITIAL_CALL_QUEUE = [
-    { id: 101, name: "Caner Yılmaz (CloudFlex)", phone: "+90 541 111 22 33", scheduledFor: new Date(Date.now() + 5 * 60_000), reason: "Fiyatlandırma pazarlığı görüşülecek (Sıcak Lead)" },
-    { id: 102, name: "Zeynep Arslan (HyperTech)", phone: "+90 542 222 33 44", scheduledFor: new Date(Date.now() + 25 * 60_000), reason: "Randevu saati teyidi ve ön bilgi alımı" },
-    { id: 103, name: "Burak Kaya (Innovia)", phone: "+90 543 333 44 55", scheduledFor: new Date(Date.now() + 60 * 60_000), reason: "Yeni çeyrek bütçe planlaması kapsamında araştırma" },
-    { id: 104, name: "Elif Demir (Startup Co)", phone: "+90 544 444 55 66", scheduledFor: new Date(Date.now() + 120 * 60_000), reason: "Ulaşılamadı (Otonom 2. deneme yapılacak)" },
-];
+interface CallRecord {
+    id: string;
+    name: string;
+    phone: string;
+    type: CallType;
+    status: CallStatus;
+    tag: CallTag;
+    duration: number;
+    time: Date;
+    summary: string;
+    conversationId?: string;
+}
 
-const performances = [
-    { label: "Müşteri Memnuniyeti", value: 94 },
-    { label: "Çağrı Çözümleme", value: 87 },
-    { label: "Randevu Dönüşümü", value: 72 },
-    { label: "Sıcak Lead Oranı", value: 63 },
-];
+interface QueueItem {
+    id: number;
+    name: string;
+    phone: string;
+    scheduledFor: Date;
+    reason: string;
+}
+
+/* ───── SKELETON ───── */
+const SkeletonCallRow = () => (
+    <div className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl animate-pulse">
+        <div className="w-9 h-9 rounded-xl bg-gray-100 flex-shrink-0" />
+        <div className="flex-1 min-w-0 space-y-2">
+            <div className="h-4 bg-gray-100 rounded-lg w-48" />
+            <div className="h-3 bg-gray-100 rounded-lg w-32" />
+        </div>
+        <div className="hidden md:block h-6 w-16 bg-gray-100 rounded-lg" />
+        <div className="hidden lg:block h-12 w-64 bg-gray-100 rounded-xl" />
+        <div className="hidden md:block h-8 w-20 bg-gray-100 rounded-lg" />
+    </div>
+);
+
+/* ───── MAP ElevenLabs conversation → CallRecord ───── */
+const mapConversation = (conv: any): CallRecord => ({
+    id: conv.conversation_id,
+    conversationId: conv.conversation_id,
+    name: conv.metadata?.phone_number || conv.metadata?.caller_id || "Bilinmeyen Numara",
+    phone: conv.metadata?.phone_number || "–",
+    type: conv.metadata?.call_type === "inbound" ? "incoming" : "outgoing",
+    status: conv.call_successful === "failure" ? "missed" : "answered",
+    tag: "cold",
+    duration: conv.call_duration_secs ?? 0,
+    time: new Date((conv.start_time_unix_secs ?? Date.now() / 1000) * 1000),
+    summary: conv.analysis?.transcript_summary || conv.metadata?.summary || "Transkript analizi yükleniyor...",
+});
 
 /* ───── SUB-COMPONENTS ───── */
 const Waveform = ({ active }: { active: boolean }) => (
@@ -102,13 +133,23 @@ const CarouselCard = ({ slides, interval = 6000 }: { slides: { icon: React.React
 export const DashboardPage = () => {
     const [aiActive, setAiActive] = useState(true);
     const [activeTab, setActiveTab] = useState<"past" | "queue">("past");
-    const [selectedCall, setSelectedCall] = useState<any | null>(null);
-    const [localCallQueue, setLocalCallQueue] = useState(INITIAL_CALL_QUEUE);
+    const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+    const [calls, setCalls] = useState<CallRecord[]>([]);
+    const [isLoadingCalls, setIsLoadingCalls] = useState(true);
+    const [callQueue, setCallQueue] = useState<QueueItem[]>([]);
     const [isNewCallModalOpen, setIsNewCallModalOpen] = useState(false);
     const [isDirectCallModalOpen, setIsDirectCallModalOpen] = useState(false);
     const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
     const [isCallingNow, setIsCallingNow] = useState(false);
     const [newCallForm, setNewCallForm] = useState({ name: "", phone: "", reason: "" });
+
+    useEffect(() => {
+        setIsLoadingCalls(true);
+        getConversations()
+            .then(data => setCalls(data.map(mapConversation)))
+            .catch(() => setCalls([]))
+            .finally(() => setIsLoadingCalls(false));
+    }, []);
 
     const handleQuickCall = async () => {
         try {
@@ -146,7 +187,7 @@ export const DashboardPage = () => {
             scheduledFor: new Date(Date.now() + 60_000) // Scheduled for 1 min from now
         };
 
-        setLocalCallQueue(prev => [newItem, ...prev]);
+        setCallQueue(prev => [newItem, ...prev]);
         setNewCallForm({ name: "", phone: "", reason: "" });
         setIsNewCallModalOpen(false);
     };
@@ -261,7 +302,7 @@ export const DashboardPage = () => {
                                         <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                                             Çağrı Kayıtları
                                             <span className="px-2 py-0.5 bg-slate-900 text-[#CCFF00] rounded-md text-xs font-bold">
-                                                {activeTab === "past" ? recentCalls.length : localCallQueue.length}
+                                                {activeTab === "past" ? (isLoadingCalls ? "..." : calls.length) : callQueue.length}
                                             </span>
                                         </h2>
                                         <p className="text-sm text-gray-500 mt-0.5">AI destekli gerçek zamanlı çağrı akışı ve kuyruk</p>
@@ -307,87 +348,97 @@ export const DashboardPage = () => {
                             <div className="p-4 md:p-6 bg-gray-50/50 rounded-b-2xl">
                                 <div className="space-y-3 max-h-[calc(100vh-380px)] overflow-y-auto pr-2 custom-scrollbar">
                                     {activeTab === "past" ? (
-                                        recentCalls.map((call) => (
-                                            <div key={call.id}
-                                                onClick={() => setSelectedCall(call)}
-                                                className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-all shadow-sm hover:shadow-md cursor-pointer group">
-                                                <CallTypeIcon type={call.type} status={call.status} />
-
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-3 mb-1.5">
-                                                        <p className="text-base font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{call.name}</p>
-                                                        <TagBadge tag={call.tag} />
-                                                    </div>
-                                                    <p className="text-sm text-gray-500 font-mono tracking-tight">{call.phone}</p>
+                                        isLoadingCalls ? (
+                                            Array.from({ length: 4 }).map((_, i) => <SkeletonCallRow key={i} />)
+                                        ) : calls.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                                                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                                                    <Phone className="w-7 h-7 text-gray-300" />
                                                 </div>
-
-                                                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-                                                    {call.status === "missed" ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100">
-                                                            <Circle className="w-2 h-2 fill-current" /> Cevapsız
-                                                        </span>
-                                                    ) : call.type === "incoming" ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
-                                                            <Circle className="w-2 h-2 fill-current" /> Gelen
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#CCFF00]/10 text-lime-700 text-xs font-bold border border-[#CCFF00]/20">
-                                                            <Circle className="w-2 h-2 fill-current" /> Giden
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <div className="hidden lg:flex items-start gap-2.5 max-w-[320px] bg-slate-50/80 border border-slate-100 rounded-xl p-3">
-                                                    <Sparkles className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                                                    <p className="text-xs text-slate-600 font-medium leading-relaxed line-clamp-2">{call.summary}</p>
-                                                </div>
-
-                                                <div className="hidden md:flex flex-col items-end flex-shrink-0 w-24">
-                                                    <p className="text-sm font-bold text-slate-900">{call.duration > 0 ? formatDuration(call.duration) : "–"}</p>
-                                                    <p className="text-xs text-slate-400 font-medium mt-1">{getTimeAgo(call.time)}</p>
-                                                </div>
-
-                                                <div className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ChevronRight className="w-5 h-5 text-gray-300" />
-                                                </div>
+                                                <p className="text-sm font-bold text-gray-500">Henüz çağrı kaydı yok</p>
+                                                <p className="text-xs text-gray-400 mt-1">İlk kampanyanızı başlatarak çağrı geçmişi oluşturun</p>
                                             </div>
-                                        ))
+                                        ) : (
+                                            calls.map((call) => (
+                                                <div key={call.id}
+                                                    onClick={() => setSelectedCall(call)}
+                                                    className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-all shadow-sm hover:shadow-md cursor-pointer group">
+                                                    <CallTypeIcon type={call.type} status={call.status} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-3 mb-1.5">
+                                                            <p className="text-base font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{call.name}</p>
+                                                            <TagBadge tag={call.tag} />
+                                                        </div>
+                                                        <p className="text-sm text-gray-500 font-mono tracking-tight">{call.phone}</p>
+                                                    </div>
+                                                    <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                                                        {call.status === "missed" ? (
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100">
+                                                                <Circle className="w-2 h-2 fill-current" /> Cevapsız
+                                                            </span>
+                                                        ) : call.type === "incoming" ? (
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
+                                                                <Circle className="w-2 h-2 fill-current" /> Gelen
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#CCFF00]/10 text-lime-700 text-xs font-bold border border-[#CCFF00]/20">
+                                                                <Circle className="w-2 h-2 fill-current" /> Giden
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="hidden lg:flex items-start gap-2.5 max-w-[320px] bg-slate-50/80 border border-slate-100 rounded-xl p-3">
+                                                        <Sparkles className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                                                        <p className="text-xs text-slate-600 font-medium leading-relaxed line-clamp-2">{call.summary}</p>
+                                                    </div>
+                                                    <div className="hidden md:flex flex-col items-end flex-shrink-0 w-24">
+                                                        <p className="text-sm font-bold text-slate-900">{call.duration > 0 ? formatDuration(call.duration) : "–"}</p>
+                                                        <p className="text-xs text-slate-400 font-medium mt-1">{getTimeAgo(call.time)}</p>
+                                                    </div>
+                                                    <div className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <ChevronRight className="w-5 h-5 text-gray-300" />
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )
                                     ) : (
-                                        localCallQueue.map((item) => (
-                                            <div key={item.id}
-                                                className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl hover:border-[#CCFF00]/50 transition-all shadow-sm hover:shadow-md cursor-pointer group">
-
-                                                <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0 shadow-sm">
-                                                    <CalendarCheck className="w-5 h-5 text-[#CCFF00]" />
+                                        callQueue.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                                                <div className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mb-4">
+                                                    <CalendarCheck className="w-7 h-7 text-[#CCFF00]" />
                                                 </div>
-
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-3 mb-1.5">
-                                                        <p className="text-base font-bold text-gray-900 truncate">{item.name}</p>
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-orange-50 text-orange-700 text-[10px] font-bold border border-orange-100 uppercase tracking-widest">
-                                                            Bekliyor
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm text-gray-500 font-mono tracking-tight">{item.phone}</p>
-                                                </div>
-
-                                                <div className="hidden lg:flex items-start gap-2.5 flex-1 bg-amber-50/50 border border-amber-100 rounded-xl p-3">
-                                                    <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                                                    <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                                                        <span className="font-bold">Bağlam:</span> {item.reason}
-                                                    </p>
-                                                </div>
-
-                                                <div className="flex flex-col items-end flex-shrink-0 min-w-[120px]">
-                                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Planlanan Zaman</p>
-                                                    <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                                        <Circle className="w-2 h-2 fill-[#CCFF00] text-[#CCFF00]" />
-                                                        {item.scheduledFor.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </div>
-
+                                                <p className="text-sm font-bold text-gray-500">Kuyruğa alınan çağrı yok</p>
+                                                <p className="text-xs text-gray-400 mt-1">"Yeni Arama" ile kuyruğa ekleyebilirsiniz</p>
                                             </div>
-                                        ))
+                                        ) : (
+                                            callQueue.map((item) => (
+                                                <div key={item.id}
+                                                    className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl hover:border-[#CCFF00]/50 transition-all shadow-sm hover:shadow-md cursor-pointer group">
+                                                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0 shadow-sm">
+                                                        <CalendarCheck className="w-5 h-5 text-[#CCFF00]" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-3 mb-1.5">
+                                                            <p className="text-base font-bold text-gray-900 truncate">{item.name}</p>
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-orange-50 text-orange-700 text-[10px] font-bold border border-orange-100 uppercase tracking-widest">Bekliyor</span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-500 font-mono tracking-tight">{item.phone}</p>
+                                                    </div>
+                                                    <div className="hidden lg:flex items-start gap-2.5 flex-1 bg-amber-50/50 border border-amber-100 rounded-xl p-3">
+                                                        <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                                        <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                                                            <span className="font-bold">Bağlam:</span> {item.reason}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex flex-col items-end flex-shrink-0 min-w-[120px]">
+                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Planlanan Zaman</p>
+                                                        <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                                            <Circle className="w-2 h-2 fill-[#CCFF00] text-[#CCFF00]" />
+                                                            {item.scheduledFor.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )
                                     )}
                                 </div>
                             </div>
