@@ -5,7 +5,7 @@ import {
     BarChart3, TrendingUp, ChevronRight, Circle,
     Radio, CheckCircle2, CalendarCheck, Users,
     Zap, Coffee, Lightbulb, Clock, Shield,
-    X, Play, Pause, Volume2, MessageSquare, Bot, User, Plus,
+    X, Play, Pause, Volume2, MessageSquare, Bot, User,
     Flame, Snowflake, RefreshCw, Power, PhoneOff, Loader2
 } from "lucide-react";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
@@ -336,12 +336,6 @@ export const DashboardPage = () => {
                                         </div>
 
 
-                                        <button
-                                            onClick={() => setIsNewCallModalOpen(true)}
-                                            className="flex items-center gap-2 bg-slate-900 text-[#CCFF00] px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:shadow-slate-900/20 hover:-translate-y-0.5 transition-all w-full sm:w-auto justify-center group"
-                                        >
-                                            <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" /> Yeni Arama
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -407,7 +401,7 @@ export const DashboardPage = () => {
                                                     <CalendarCheck className="w-7 h-7 text-[#CCFF00]" />
                                                 </div>
                                                 <p className="text-sm font-bold text-gray-500">Kuyruğa alınan çağrı yok</p>
-                                                <p className="text-xs text-gray-400 mt-1">"Yeni Arama" ile kuyruğa ekleyebilirsiniz</p>
+                                                <p className="text-xs text-gray-400 mt-1">Kampanya başlatarak kuyruğu doldurun</p>
                                             </div>
                                         ) : (
                                             callQueue.map((item) => (

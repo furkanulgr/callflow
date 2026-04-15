@@ -1,9 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Sparkles, Phone, Bell, Clock, User, Save,
-    Volume2, Globe, Shield, ChevronRight, Building
+    Volume2, Globe, Shield, ChevronRight, Building, CheckCircle2
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+
+const STORAGE_KEY = "callflow_settings";
+
+interface SettingsState {
+    voice: string;
+    greeting: string;
+    autoAnswer: boolean;
+    recordCalls: boolean;
+    callSummary: boolean;
+    notifications: boolean;
+    missedAlert: boolean;
+    hotAlert: boolean;
+    workHours: boolean;
+    workStart: string;
+    workEnd: string;
+    workDays: number[];
+    dailyMax: number;
+    callDelay: number;
+}
+
+const DEFAULTS: SettingsState = {
+    voice: "female-tr",
+    greeting: "Merhaba, LUERA'ya hoş geldiniz. Size nasıl yardımcı olabilirim?",
+    autoAnswer: true,
+    recordCalls: true,
+    callSummary: true,
+    notifications: true,
+    missedAlert: true,
+    hotAlert: true,
+    workHours: true,
+    workStart: "09:00",
+    workEnd: "18:00",
+    workDays: [0, 1, 2, 3, 4],
+    dailyMax: 100,
+    callDelay: 30,
+};
+
+function loadSettings(): SettingsState {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    } catch {}
+    return DEFAULTS;
+}
 
 type Section = "ai" | "calls" | "notifications" | "hours" | "account";
 
@@ -18,17 +62,29 @@ const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 
 export const SettingsPage = () => {
     const [section, setSection] = useState<Section>("ai");
-    const [voice, setVoice] = useState("female-tr");
-    const [greeting, setGreeting] = useState("Merhaba, VMS Digital'e hoş geldiniz. Size nasıl yardımcı olabilirim?");
-    const [autoAnswer, setAutoAnswer] = useState(true);
-    const [recordCalls, setRecordCalls] = useState(true);
-    const [callSummary, setCallSummary] = useState(true);
-    const [notifications, setNotifications] = useState(true);
-    const [missedAlert, setMissedAlert] = useState(true);
-    const [hotAlert, setHotAlert] = useState(true);
-    const [workHours, setWorkHours] = useState(true);
-    const [workStart, setWorkStart] = useState("09:00");
-    const [workEnd, setWorkEnd] = useState("18:00");
+    const [saved, setSaved] = useState(false);
+    const [s, setS] = useState<SettingsState>(loadSettings);
+
+    const set = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) =>
+        setS(prev => ({ ...prev, [key]: value }));
+
+    const toggleWorkDay = (i: number) =>
+        setS(prev => ({
+            ...prev,
+            workDays: prev.workDays.includes(i)
+                ? prev.workDays.filter(d => d !== i)
+                : [...prev.workDays, i],
+        }));
+
+    const handleSave = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+    };
+
+    // Destructure for convenience
+    const { voice, greeting, autoAnswer, recordCalls, callSummary,
+            notifications, missedAlert, hotAlert, workHours, workStart, workEnd } = s;
 
     const sections: { id: Section; label: string; Icon: React.ElementType }[] = [
         { id: "ai", label: "AI Asistan", Icon: Sparkles },
@@ -101,7 +157,7 @@ export const SettingsPage = () => {
                                                 { id: "female-en", label: "Female (English)", desc: "Natural & warm" },
                                                 { id: "male-en", label: "Male (English)", desc: "Professional tone" },
                                             ].map(v => (
-                                                <button key={v.id} onClick={() => setVoice(v.id)}
+                                                <button key={v.id} onClick={() => set("voice", v.id)}
                                                     className={cn("p-4 rounded-2xl border text-left transition-all",
                                                         voice === v.id ? "border-[#CCFF00] bg-[#CCFF00]/10 shadow-sm ring-1 ring-[#CCFF00]/30" : "border-gray-200 hover:border-slate-300 bg-white")}>
                                                     <div className="flex items-center gap-2 mb-1">
@@ -117,7 +173,7 @@ export const SettingsPage = () => {
                                     {/* Greeting */}
                                     <div>
                                         <label className="text-sm font-semibold text-gray-700 mb-2 block">Karşılama Mesajı</label>
-                                        <textarea rows={3} value={greeting} onChange={e => setGreeting(e.target.value)}
+                                        <textarea rows={3} value={greeting} onChange={e => set("greeting", e.target.value)}
                                             className="input-base resize-none" />
                                         <p className="text-xs text-gray-400 mt-1">AI, çağrıyı yanıtladığında söyleyeceği ilk cümle</p>
                                     </div>
@@ -141,18 +197,18 @@ export const SettingsPage = () => {
                                         <Phone className="w-5 h-5 text-blue-500" /> Çağrı Ayarları
                                     </h2>
                                     <div className="space-y-3">
-                                        <SettingRow label="Otomatik Yanıtlama" desc="Gelen çağrıları AI otomatik yanıtlasın" enabled={autoAnswer} onChange={setAutoAnswer} />
-                                        <SettingRow label="Çağrı Kaydı" desc="Tüm çağrıları kaydet ve sakla" enabled={recordCalls} onChange={setRecordCalls} />
-                                        <SettingRow label="AI Özet Oluştur" desc="Her çağrı sonunda AI özeti hazırlansın" enabled={callSummary} onChange={setCallSummary} />
+                                        <SettingRow label="Otomatik Yanıtlama" desc="Gelen çağrıları AI otomatik yanıtlasın" enabled={autoAnswer} onChange={v => set("autoAnswer", v)} />
+                                        <SettingRow label="Çağrı Kaydı" desc="Tüm çağrıları kaydet ve sakla" enabled={recordCalls} onChange={v => set("recordCalls", v)} />
+                                        <SettingRow label="AI Özet Oluştur" desc="Her çağrı sonunda AI özeti hazırlansın" enabled={callSummary} onChange={v => set("callSummary", v)} />
                                     </div>
 
                                     <div>
                                         <label className="text-sm font-semibold text-gray-700 mb-2 block">Günlük Max. Arama Sayısı</label>
-                                        <input type="number" defaultValue={100} className="input-base w-40" />
+                                        <input type="number" value={s.dailyMax} onChange={e => set("dailyMax", parseInt(e.target.value) || 0)} className="input-base w-40" />
                                     </div>
                                     <div>
                                         <label className="text-sm font-semibold text-gray-700 mb-2 block">Çağrılar Arası Bekleme (sn)</label>
-                                        <input type="number" defaultValue={30} className="input-base w-40" />
+                                        <input type="number" value={s.callDelay} onChange={e => set("callDelay", parseInt(e.target.value) || 0)} className="input-base w-40" />
                                     </div>
                                 </div>
                             )}
@@ -164,9 +220,9 @@ export const SettingsPage = () => {
                                         <Bell className="w-5 h-5 text-amber-500" /> Bildirim Ayarları
                                     </h2>
                                     <div className="space-y-3">
-                                        <SettingRow label="Anlık Bildirimler" desc="Yeni çağrı ve mesajlar için bildir" enabled={notifications} onChange={setNotifications} />
-                                        <SettingRow label="Cevapsız Çağrı Uyarısı" desc="Cevapsız çağrılar için bildirim gönder" enabled={missedAlert} onChange={setMissedAlert} />
-                                        <SettingRow label="Sıcak Lead Uyarısı" desc="Sıcak lead tespit edildiğinde uyar" enabled={hotAlert} onChange={setHotAlert} />
+                                        <SettingRow label="Anlık Bildirimler" desc="Yeni çağrı ve mesajlar için bildir" enabled={notifications} onChange={v => set("notifications", v)} />
+                                        <SettingRow label="Cevapsız Çağrı Uyarısı" desc="Cevapsız çağrılar için bildirim gönder" enabled={missedAlert} onChange={v => set("missedAlert", v)} />
+                                        <SettingRow label="Sıcak Lead Uyarısı" desc="Sıcak lead tespit edildiğinde uyar" enabled={hotAlert} onChange={v => set("hotAlert", v)} />
                                     </div>
                                 </div>
                             )}
@@ -178,18 +234,18 @@ export const SettingsPage = () => {
                                         <Clock className="w-5 h-5 text-emerald-500" /> Çalışma Saatleri
                                     </h2>
                                     <div className="space-y-3">
-                                        <SettingRow label="Çalışma Saatleri Modu" desc="Mesai dışında farklı mesaj kullan" enabled={workHours} onChange={setWorkHours} />
+                                        <SettingRow label="Çalışma Saatleri Modu" desc="Mesai dışında farklı mesaj kullan" enabled={workHours} onChange={v => set("workHours", v)} />
                                     </div>
 
                                     {workHours && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Başlangıç</label>
-                                                <input type="time" value={workStart} onChange={e => setWorkStart(e.target.value)} className="input-base" />
+                                                <input type="time" value={workStart} onChange={e => set("workStart", e.target.value)} className="input-base" />
                                             </div>
                                             <div>
                                                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Bitiş</label>
-                                                <input type="time" value={workEnd} onChange={e => setWorkEnd(e.target.value)} className="input-base" />
+                                                <input type="time" value={workEnd} onChange={e => set("workEnd", e.target.value)} className="input-base" />
                                             </div>
                                         </div>
                                     )}
@@ -198,9 +254,9 @@ export const SettingsPage = () => {
                                         <label className="text-sm font-semibold text-gray-700 mb-2 block">Çalışılan Günler</label>
                                         <div className="flex gap-2 flex-wrap">
                                             {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((d, i) => (
-                                                <button key={d}
+                                                <button key={d} onClick={() => toggleWorkDay(i)}
                                                     className={cn("w-12 h-10 rounded-xl text-xs font-bold transition-all",
-                                                        i < 5 ? "bg-gray-900 text-white shadow-sm" : "bg-gray-100 text-gray-400 hover:bg-gray-200")}>
+                                                        s.workDays.includes(i) ? "bg-gray-900 text-white shadow-sm" : "bg-gray-100 text-gray-400 hover:bg-gray-200")}>
                                                     {d}
                                                 </button>
                                             ))}
@@ -247,8 +303,13 @@ export const SettingsPage = () => {
                             )}
 
                             {/* Save */}
-                            <div className="mt-8 flex justify-end">
-                                <button className="flex items-center gap-2 px-6 py-3 rounded-xl btn-primary text-sm">
+                            <div className="mt-8 flex items-center justify-end gap-3">
+                                {saved && (
+                                    <span className="flex items-center gap-1.5 text-sm font-semibold text-[#4d7c0f]">
+                                        <CheckCircle2 className="w-4 h-4" /> Kaydedildi!
+                                    </span>
+                                )}
+                                <button onClick={handleSave} className="flex items-center gap-2 px-6 py-3 rounded-xl btn-primary text-sm">
                                     <Save className="w-4 h-4" /> Kaydet
                                 </button>
                             </div>

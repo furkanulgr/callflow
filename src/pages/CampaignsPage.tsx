@@ -6,10 +6,12 @@ import {
     XCircle, Flame, CalendarCheck, Zap, Snowflake, Headphones,
     Bot, ChevronLeft, Loader2, AlertCircle
 } from "lucide-react";
+import Papa from "papaparse";
 import { cn } from "@/utils/cn";
 import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
 import { AgentPromptEditor } from "@/components/AgentPromptEditor";
-import { getPhoneNumbers, PhoneNumberItem, getAgents, AgentListItem } from "@/services/elevenlabsApi";
+import { getPhoneNumbers, PhoneNumberItem, getAgents, AgentListItem, startBatchCalling } from "@/services/elevenlabsApi";
+import { supabase } from "@/lib/supabase";
 
 type CampaignStatus = "active" | "paused" | "completed" | "draft";
 
@@ -76,6 +78,8 @@ export const CampaignsPage = () => {
     const [dailyLimit, setDailyLimit] = useState<number>(50);
     const [isLoadingStep2, setIsLoadingStep2] = useState(false);
     const [launchMode, setLaunchMode] = useState<"draft" | "active">("draft");
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Fetch agents + phone numbers when entering step 2
@@ -99,10 +103,19 @@ export const CampaignsPage = () => {
             const file = e.target.files[0];
             setUploadedFile(file);
             setIsUploading(true);
-            setTimeout(() => {
-                setIsUploading(false);
-                setNumberCount(Math.floor(Math.random() * 200) + 20);
-            }, 1200);
+            // Parse CSV to get real contact count
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    setNumberCount(results.data.length);
+                    setIsUploading(false);
+                },
+                error: () => {
+                    setIsUploading(false);
+                    setNumberCount(0);
+                }
+            });
         }
     };
 
@@ -134,26 +147,71 @@ export const CampaignsPage = () => {
         setWizardStep(s => s + 1);
     };
 
-    const handleSaveCampaign = (mode: "draft" | "active") => {
+    const handleSaveCampaign = async (mode: "draft" | "active") => {
         if (!newName.trim()) return;
-        const selectedAgent = agents.find(a => a.agent_id === selectedAgentId);
-        const newCampaign = {
-            id: Date.now(),
-            name: newName,
-            status: mode as CampaignStatus,
-            total: numberCount || 0,
-            called: 0,
-            answered: 0,
-            hot: 0,
-            cold: 0,
-            appointments: 0,
-            createdAt: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
-            progress: 0,
-            agentId: selectedAgentId || import.meta.env.VITE_LUNA_AGENT_ID || "",
-            agentRole: selectedAgent?.name || "Genel Asistan",
-        };
-        setCampaignList(prev => [newCampaign, ...prev]);
-        handleCloseModal();
+        setIsSaving(true);
+        setSaveError(null);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            // 1. Supabase'e kampanya kaydet
+            const { data: savedCampaign, error: dbError } = await supabase
+                .from("campaigns")
+                .insert({
+                    user_id: user?.id,
+                    name: newName,
+                    status: mode,
+                    total_contacts: numberCount || 0,
+                    agent_id: selectedAgentId || import.meta.env.VITE_LUNA_AGENT_ID || "",
+                    phone_number_id: selectedPhone,
+                    daily_limit: dailyLimit,
+                })
+                .select()
+                .single();
+
+            if (dbError) throw new Error(dbError.message);
+
+            // 2. "Aktif" ise ElevenLabs Batch Calling başlat
+            if (mode === "active" && uploadedFile && selectedAgentId && selectedPhone) {
+                await startBatchCalling(
+                    selectedAgentId,
+                    selectedPhone,
+                    uploadedFile,
+                    newName
+                );
+                // Durumu batch_started olarak güncelle
+                await supabase
+                    .from("campaigns")
+                    .update({ status: "active" })
+                    .eq("id", savedCampaign.id);
+            }
+
+            // 3. Local listeye ekle
+            const selectedAgent = agents.find(a => a.agent_id === selectedAgentId);
+            const newCampaign = {
+                id: savedCampaign.id,
+                name: newName,
+                status: mode as CampaignStatus,
+                total: numberCount || 0,
+                called: 0,
+                answered: 0,
+                hot: 0,
+                cold: 0,
+                appointments: 0,
+                createdAt: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
+                progress: 0,
+                agentId: selectedAgentId || "",
+                agentRole: selectedAgent?.name || "Genel Asistan",
+            };
+            setCampaignList(prev => [newCampaign, ...prev]);
+            handleCloseModal();
+
+        } catch (err: any) {
+            setSaveError(err.message || "Bir hata oluştu.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const totalStats = {
@@ -530,42 +588,50 @@ export const CampaignsPage = () => {
                         </div>
 
                         {/* Wizard Footer */}
-                        <div className="px-8 pb-8 flex gap-3">
-                            {wizardStep > 1 ? (
-                                <button onClick={() => setWizardStep(s => s - 1)}
-                                    className="flex items-center gap-1.5 px-5 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
-                                    <ChevronLeft className="w-4 h-4" /> Geri
-                                </button>
-                            ) : (
-                                <button onClick={handleCloseModal}
-                                    className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
-                                    İptal
-                                </button>
-                            )}
-
-                            {wizardStep < 3 ? (
-                                <button onClick={handleNext}
-                                    disabled={wizardStep === 1 && !step1Valid}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl text-sm font-bold transition-all",
-                                        (wizardStep === 1 && !step1Valid)
-                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                            : "btn-primary"
-                                    )}>
-                                    İleri <ChevronRight className="w-4 h-4" />
-                                </button>
-                            ) : (
-                                <div className="flex-1 flex gap-2">
-                                    <button onClick={() => handleSaveCampaign("draft")}
-                                        className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                                        Taslak Kaydet
-                                    </button>
-                                    <button onClick={() => handleSaveCampaign("active")}
-                                        className="flex-1 py-3 rounded-2xl btn-primary text-sm flex items-center justify-center gap-1.5">
-                                        <Play className="w-4 h-4" /> Başlat
-                                    </button>
+                        <div className="px-8 pb-8 space-y-3">
+                            {saveError && (
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
+                                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                    {saveError}
                                 </div>
                             )}
+                            <div className="flex gap-3">
+                                {wizardStep > 1 ? (
+                                    <button onClick={() => setWizardStep(s => s - 1)} disabled={isSaving}
+                                        className="flex items-center gap-1.5 px-5 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                                        <ChevronLeft className="w-4 h-4" /> Geri
+                                    </button>
+                                ) : (
+                                    <button onClick={handleCloseModal}
+                                        className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                                        İptal
+                                    </button>
+                                )}
+
+                                {wizardStep < 3 ? (
+                                    <button onClick={handleNext}
+                                        disabled={wizardStep === 1 && !step1Valid}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl text-sm font-bold transition-all",
+                                            (wizardStep === 1 && !step1Valid)
+                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                : "btn-primary"
+                                        )}>
+                                        İleri <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                ) : (
+                                    <div className="flex-1 flex gap-2">
+                                        <button onClick={() => handleSaveCampaign("draft")} disabled={isSaving}
+                                            className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Taslak Kaydet"}
+                                        </button>
+                                        <button onClick={() => handleSaveCampaign("active")} disabled={isSaving}
+                                            className="flex-1 py-3 rounded-2xl btn-primary text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4" /> Başlat</>}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

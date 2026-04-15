@@ -290,6 +290,57 @@ export const getConversationDetails = async (conversationId: string): Promise<an
     return await response.json();
 };
 
+export interface BatchContact {
+    phone_number: string;
+    language?: string;
+    voice_id?: string;
+    first_message?: string;
+    prompt?: string;
+    [key: string]: string | undefined;
+}
+
+export interface BatchCallResult {
+    batch_id: string;
+    status: string;
+    total_calls: number;
+}
+
+/**
+ * Starts a batch calling campaign via ElevenLabs Batch Calling API.
+ * Uploads the CSV file directly to the API.
+ */
+export const startBatchCalling = async (
+    agentId: string,
+    phoneNumberId: string,
+    csvFile: File,
+    batchName?: string
+): Promise<BatchCallResult> => {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
+
+    const formData = new FormData();
+    formData.append("agent_id", agentId);
+    formData.append("phone_number_id", phoneNumberId);
+    formData.append("file", csvFile, csvFile.name);
+    if (batchName) formData.append("batch_name", batchName);
+
+    const response = await fetch(`${API_BASE}/v1/convai/batches`, {
+        method: "POST",
+        headers: {
+            "xi-api-key": apiKey,
+            // NOT setting Content-Type — browser sets it automatically with boundary for FormData
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`ElevenLabs Batch API Error: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+};
+
 /**
  * Fetches the raw audio for the conversation and returns a blob URL.
  */

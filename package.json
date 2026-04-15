@@ -12,15 +12,17 @@
   "dependencies": {
     "@elevenlabs/client": "^0.15.2",
     "@supabase/supabase-js": "^2.98.0",
+    "@types/papaparse": "^5.5.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.300.0",
+    "papaparse": "^5.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.13.0",
     "recharts": "^3.6.0",
-"tailwind-merge": "^2.6.0",
+    "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
