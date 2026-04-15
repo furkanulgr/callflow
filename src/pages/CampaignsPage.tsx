@@ -15,36 +15,41 @@ import { supabase } from "@/lib/supabase";
 
 type CampaignStatus = "active" | "paused" | "completed" | "draft";
 
-const campaigns = [
-    {
-        id: 1, name: "Mart Kampanyası — Klinikler", status: "active" as CampaignStatus,
-        total: 250, called: 147, answered: 112, hot: 38, cold: 74, appointments: 12,
-        createdAt: "28 Şubat 2026", progress: 59,
-        agentId: "agent_6301knq9gn2nf3jryph25j66510p",
-        agentRole: "Klinik Randevu Asistanı"
-    },
-    {
-        id: 2, name: "Vip Müşteri Takip", status: "paused" as CampaignStatus,
-        total: 80, called: 45, answered: 40, hot: 18, cold: 22, appointments: 5,
-        createdAt: "25 Şubat 2026", progress: 56,
-        agentId: "pqHfZKP75CvOlQylNhV4",
-        agentRole: "VIP Müşteri Temsilcisi"
-    },
-    {
-        id: 3, name: "Yeni Ürün Duyurusu", status: "completed" as CampaignStatus,
-        total: 120, called: 120, answered: 98, hot: 42, cold: 56, appointments: 19,
-        createdAt: "20 Şubat 2026", progress: 100,
-        agentId: "cgSgspJ2msm6clMC8zVf",
-        agentRole: "Satış & Tanıtım Uzmanı"
-    },
-    {
-        id: 4, name: "B2B Segment — İnşaat", status: "draft" as CampaignStatus,
-        total: 300, called: 0, answered: 0, hot: 0, cold: 0, appointments: 0,
-        createdAt: "1 Mart 2026", progress: 0,
-        agentId: "cjVigY5qzO86HvrZZtP0",
-        agentRole: "B2B Ağ Geliştirme Asistanı"
-    },
-];
+type CampaignRow = {
+    id: string;
+    name: string;
+    status: CampaignStatus;
+    total: number;
+    called: number;
+    answered: number;
+    hot: number;
+    cold: number;
+    appointments: number;
+    createdAt: string;
+    progress: number;
+    agentId: string;
+    agentRole: string;
+};
+
+function mapDbCampaign(row: any): CampaignRow {
+    const total = row.total_contacts || 0;
+    const called = row.called || 0;
+    return {
+        id: row.id,
+        name: row.name,
+        status: row.status as CampaignStatus,
+        total,
+        called,
+        answered: row.answered || 0,
+        hot: row.hot_leads || 0,
+        cold: row.cold_leads || 0,
+        appointments: row.appointments || 0,
+        createdAt: new Date(row.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
+        progress: total > 0 ? Math.round((called / total) * 100) : 0,
+        agentId: row.agent_id || "",
+        agentRole: "",
+    };
+}
 
 const statusConfig: Record<CampaignStatus, { label: string; cls: string; dot: string }> = {
     active: { label: "Aktif", cls: "badge-appointment", dot: "bg-emerald-500" },
@@ -61,9 +66,22 @@ const WIZARD_STEPS = [
 
 export const CampaignsPage = () => {
     const [showModal, setShowModal] = useState(false);
-    const [campaignList, setCampaignList] = useState(campaigns);
-    const [selectedCampaign, setSelectedCampaign] = useState<(typeof campaigns)[0] | null>(null);
-    const [voiceDemoCampaign, setVoiceDemoCampaign] = useState<(typeof campaigns)[0] | null>(null);
+    const [campaignList, setCampaignList] = useState<CampaignRow[]>([]);
+    const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
+    const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(null);
+    const [voiceDemoCampaign, setVoiceDemoCampaign] = useState<CampaignRow | null>(null);
+
+    // Supabase'den kampanyaları çek
+    useEffect(() => {
+        supabase
+            .from("campaigns")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .then(({ data, error }) => {
+                if (!error && data) setCampaignList(data.map(mapDbCampaign));
+                setIsLoadingCampaigns(false);
+            });
+    }, []);
 
     // Wizard state
     const [wizardStep, setWizardStep] = useState(1);
@@ -272,7 +290,32 @@ export const CampaignsPage = () => {
 
                 {/* Campaign List */}
                 <div className="space-y-4">
-                    {campaignList.map((c) => {
+                    {isLoadingCampaigns ? (
+                        [1, 2, 3].map(i => (
+                            <div key={i} className="bg-white rounded-3xl p-6 card animate-pulse">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-2 h-2 rounded-full bg-gray-200" />
+                                    <div className="h-4 w-48 bg-gray-200 rounded-lg" />
+                                    <div className="h-5 w-16 bg-gray-100 rounded-full" />
+                                </div>
+                                <div className="grid grid-cols-6 gap-3 mb-4">
+                                    {[1,2,3,4,5,6].map(j => <div key={j} className="h-10 bg-gray-100 rounded-xl" />)}
+                                </div>
+                                <div className="h-2 bg-gray-100 rounded-full" />
+                            </div>
+                        ))
+                    ) : campaignList.length === 0 ? (
+                        <div className="bg-white rounded-3xl p-16 card flex flex-col items-center justify-center text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                                <Radio className="w-8 h-8 text-gray-300" />
+                            </div>
+                            <p className="font-bold text-gray-700 mb-1">Henüz kampanya yok</p>
+                            <p className="text-sm text-gray-400 mb-5">İlk kampanyanı oluşturarak aramaları başlat</p>
+                            <button onClick={() => setShowModal(true)} className="btn-primary px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
+                                <Plus className="w-4 h-4" /> Yeni Kampanya
+                            </button>
+                        </div>
+                    ) : campaignList.map((c) => {
                         const sc = statusConfig[c.status];
                         return (
                             <div key={c.id} className="bg-white rounded-3xl p-6 card">
