@@ -338,7 +338,7 @@ export const startBatchCalling = async (
     }).filter(r => r.phone_number);
 
     const response = await fetch(
-        `${API_BASE}/v1/convai/agents/${agentId}/phone-numbers/${phoneNumberId}/batch-calls`,
+        `${API_BASE}/v1/convai/batch-calling/submit`,
         {
             method: "POST",
             headers: {
@@ -346,8 +346,10 @@ export const startBatchCalling = async (
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
+                call_name: batchName || "Kampanya",
+                agent_id: agentId,
+                agent_phone_number_id: phoneNumberId,
                 recipients,
-                ...(batchName && { batch_name: batchName }),
             }),
         }
     );
