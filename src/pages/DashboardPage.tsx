@@ -55,14 +55,14 @@ const SkeletonCallRow = () => (
 const mapConversation = (conv: any): CallRecord => ({
     id: conv.conversation_id,
     conversationId: conv.conversation_id,
-    name: conv.metadata?.phone_number || conv.metadata?.caller_id || "Bilinmeyen Numara",
-    phone: conv.metadata?.phone_number || "–",
-    type: conv.metadata?.call_type === "inbound" ? "incoming" : "outgoing",
-    status: conv.call_successful === "failure" ? "missed" : "answered",
+    name: conv.call_summary_title || conv.metadata?.phone_number || conv.metadata?.caller_id || "Bilinmeyen Numara",
+    phone: conv.metadata?.phone_number || conv.metadata?.to_number || "–",
+    type: conv.direction === "inbound" ? "incoming" : "outgoing",
+    status: conv.call_successful === "failure" || conv.status === "failed" ? "missed" : "answered",
     tag: "cold",
     duration: conv.call_duration_secs ?? 0,
     time: new Date((conv.start_time_unix_secs ?? Date.now() / 1000) * 1000),
-    summary: conv.analysis?.transcript_summary || conv.metadata?.summary || "Transkript analizi yükleniyor...",
+    summary: conv.transcript_summary || conv.analysis?.transcript_summary || conv.metadata?.summary || "Özet henüz oluşturulmadı.",
 });
 
 /* ───── SUB-COMPONENTS ───── */
