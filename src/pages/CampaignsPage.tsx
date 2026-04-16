@@ -403,40 +403,45 @@ export const CampaignsPage = () => {
 
             {/* ─── NEW CAMPAIGN WIZARD MODAL ─── */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg animate-fadeInUp overflow-hidden">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-[0_32px_80px_rgba(0,0,0,0.25)] w-full max-w-2xl animate-fadeInUp overflow-hidden border border-slate-200">
 
-                        {/* Wizard Header */}
-                        <div className="px-8 pt-8 pb-6 border-b border-gray-100">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900">Yeni Kampanya</h2>
-                                <button onClick={handleCloseModal} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                        {/* Dark Header */}
+                        <div className="bg-slate-950 px-8 pt-7 pb-6">
+                            <div className="flex items-center justify-between mb-7">
+                                <div>
+                                    <h2 className="text-xl font-bold text-white tracking-tight">Yeni Kampanya</h2>
+                                    <p className="text-xs text-slate-400 mt-0.5">Toplu arama kampanyası oluşturun</p>
+                                </div>
+                                <button onClick={handleCloseModal} className="p-2 rounded-xl hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">
                                     <XCircle className="w-5 h-5" />
                                 </button>
                             </div>
 
                             {/* Step Indicator */}
-                            <div className="flex items-center gap-0">
+                            <div className="flex items-center">
                                 {WIZARD_STEPS.map((step, i) => (
                                     <div key={step.num} className="flex items-center flex-1">
-                                        <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                                        <div className="flex items-center gap-3 flex-shrink-0">
                                             <div className={cn(
-                                                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300",
-                                                wizardStep > step.num ? "bg-slate-900 text-[#CCFF00]" :
-                                                wizardStep === step.num ? "bg-slate-900 text-[#CCFF00] shadow-[0_0_12px_rgba(204,255,0,0.3)]" :
-                                                "bg-gray-100 text-gray-400"
+                                                "w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300",
+                                                wizardStep > step.num
+                                                    ? "bg-[#CCFF00] text-slate-900"
+                                                    : wizardStep === step.num
+                                                    ? "bg-[#CCFF00] text-slate-900 shadow-[0_0_20px_rgba(204,255,0,0.4)]"
+                                                    : "bg-slate-800 text-slate-500"
                                             )}>
                                                 {wizardStep > step.num ? <Check className="w-4 h-4" /> : step.num}
                                             </div>
                                             <span className={cn(
-                                                "text-[10px] font-semibold whitespace-nowrap",
-                                                wizardStep >= step.num ? "text-slate-700" : "text-gray-400"
+                                                "text-xs font-semibold whitespace-nowrap hidden sm:block",
+                                                wizardStep >= step.num ? "text-white" : "text-slate-500"
                                             )}>{step.label}</span>
                                         </div>
                                         {i < WIZARD_STEPS.length - 1 && (
                                             <div className={cn(
-                                                "flex-1 h-0.5 mb-4 mx-2 rounded-full transition-all duration-500",
-                                                wizardStep > step.num ? "bg-slate-900" : "bg-gray-200"
+                                                "flex-1 h-px mx-4 transition-all duration-500",
+                                                wizardStep > step.num ? "bg-[#CCFF00]/50" : "bg-slate-700"
                                             )} />
                                         )}
                                     </div>
@@ -445,15 +450,15 @@ export const CampaignsPage = () => {
                         </div>
 
                         {/* Step Content */}
-                        <div className="px-8 py-6 min-h-[320px] flex flex-col">
+                        <div className="px-8 py-7 min-h-[340px] flex flex-col bg-white">
 
                             {/* ── STEP 1: Kampanya Tanımla ── */}
                             {wizardStep === 1 && (
-                                <div className="space-y-5 flex-1">
+                                <div className="space-y-6 flex-1">
                                     <div>
-                                        <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Kampanya Adı <span className="text-red-400">*</span></label>
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Kampanya Adı <span className="text-red-400">*</span></label>
                                         <input
-                                            className="input-base"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 font-medium placeholder-slate-400 focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 transition-all text-sm"
                                             placeholder="Örn: Nisan Klinik Aramaları"
                                             value={newName}
                                             onChange={e => setNewName(e.target.value)}
@@ -462,120 +467,147 @@ export const CampaignsPage = () => {
                                     </div>
 
                                     <div>
-                                        <label className="text-sm font-semibold text-gray-700 mb-1.5 flex justify-between">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex justify-between items-center">
                                             <span>Numara Listesi</span>
                                             {uploadedFile && (
-                                                <button onClick={removeFile} className="text-red-500 hover:text-red-700 text-xs font-bold">Kaldır</button>
+                                                <button onClick={removeFile} className="text-red-500 hover:text-red-600 text-[10px] font-bold normal-case tracking-normal">Kaldır</button>
                                             )}
                                         </label>
                                         <input type="file" accept=".csv,.txt,.xlsx,.xls" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
 
                                         {!uploadedFile ? (
                                             <div onClick={() => fileInputRef.current?.click()}
-                                                className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-[#CCFF00] hover:bg-[#CCFF00]/5 transition-all group">
-                                                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-[#CCFF00]/20 transition-colors">
-                                                    <Upload className="w-6 h-6 text-gray-400 group-hover:text-lime-600 transition-colors" />
+                                                className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center cursor-pointer hover:border-[#CCFF00] hover:bg-[#CCFF00]/5 transition-all duration-200 group">
+                                                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-[#CCFF00]/20 transition-colors">
+                                                    <Upload className="w-6 h-6 text-slate-400 group-hover:text-lime-600 transition-colors" />
                                                 </div>
-                                                <p className="text-sm text-gray-700 font-bold">CSV veya Excel yükleyin</p>
-                                                <p className="text-xs text-gray-400 mt-1">Her satırda bir numara olmalı</p>
+                                                <p className="text-sm font-bold text-slate-700">CSV veya Excel yükleyin</p>
+                                                <p className="text-xs text-slate-400 mt-1.5">Her satırda bir telefon numarası olmalı</p>
+                                                <span className="inline-block mt-3 text-[10px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">.csv · .xlsx · .xls · .txt</span>
                                             </div>
                                         ) : (
-                                            <div className="border border-emerald-100 bg-emerald-50 rounded-2xl p-4 flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                                                        <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                                            <div className="border-2 border-emerald-200 bg-emerald-50 rounded-2xl p-5 flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-emerald-100">
+                                                        <FileSpreadsheet className="w-6 h-6 text-emerald-600" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{uploadedFile.name}</p>
-                                                        <p className="text-xs text-emerald-700 font-medium mt-0.5">
+                                                        <p className="text-sm font-bold text-slate-900 truncate max-w-[240px]">{uploadedFile.name}</p>
+                                                        <p className="text-xs font-medium mt-1">
                                                             {isUploading ? (
-                                                                <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Analiz ediliyor...</span>
+                                                                <span className="flex items-center gap-1.5 text-slate-500"><Loader2 className="w-3 h-3 animate-spin" /> Analiz ediliyor...</span>
                                                             ) : (
-                                                                <span className="flex items-center gap-1"><Check className="w-3 h-3" /> {numberCount} numara hazır</span>
+                                                                <span className="flex items-center gap-1.5 text-emerald-600"><Check className="w-3.5 h-3.5" /> <strong>{numberCount}</strong> numara yüklendi</span>
                                                             )}
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <span className="text-xs font-mono text-gray-400">{(uploadedFile.size / 1024).toFixed(1)} KB</span>
+                                                <span className="text-xs font-mono text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-100">{(uploadedFile.size / 1024).toFixed(1)} KB</span>
                                             </div>
                                         )}
-                                        <p className="text-xs text-gray-400 mt-1.5">Opsiyonel — sonradan da eklenebilir</p>
+                                        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+                                            <span className="w-1 h-1 rounded-full bg-slate-300 inline-block"></span>
+                                            Opsiyonel — kampanya başlatıldıktan sonra da eklenebilir
+                                        </p>
                                     </div>
                                 </div>
                             )}
 
                             {/* ── STEP 2: Agent & Numara ── */}
                             {wizardStep === 2 && (
-                                <div className="space-y-5 flex-1">
+                                <div className="space-y-6 flex-1">
                                     {isLoadingStep2 ? (
-                                        <div className="flex flex-col items-center justify-center h-48 gap-3">
-                                            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-                                            <p className="text-sm text-gray-500">ElevenLabs'ten veriler çekiliyor...</p>
+                                        <div className="flex flex-col items-center justify-center h-56 gap-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+                                                <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
+                                            </div>
+                                            <p className="text-sm text-slate-500 font-medium">ElevenLabs'ten veriler çekiliyor...</p>
                                         </div>
                                     ) : (
                                         <>
                                             {/* Agent Seçimi */}
                                             <div>
-                                                <label className="text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
-                                                    <Bot className="w-4 h-4 text-slate-600" /> AI Agent <span className="text-red-400">*</span>
+                                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                    <Bot className="w-3.5 h-3.5" /> AI Agent <span className="text-red-400">*</span>
                                                 </label>
                                                 {agents.length > 0 ? (
-                                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                                    <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                                                         {agents.map(agent => (
                                                             <div key={agent.agent_id}
                                                                 onClick={() => setSelectedAgentId(agent.agent_id)}
                                                                 className={cn(
-                                                                    "flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all",
+                                                                    "flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200",
                                                                     selectedAgentId === agent.agent_id
-                                                                        ? "border-slate-900 bg-slate-50"
-                                                                        : "border-gray-100 hover:border-gray-300 bg-white"
+                                                                        ? "border-slate-900 bg-slate-950 shadow-lg"
+                                                                        : "border-slate-100 hover:border-slate-300 bg-slate-50 hover:bg-white"
                                                                 )}>
                                                                 <div className={cn(
-                                                                    "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
-                                                                    selectedAgentId === agent.agent_id ? "bg-slate-900" : "bg-gray-100"
+                                                                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
+                                                                    selectedAgentId === agent.agent_id ? "bg-[#CCFF00]" : "bg-white border border-slate-200"
                                                                 )}>
-                                                                    <Bot className={cn("w-4 h-4", selectedAgentId === agent.agent_id ? "text-[#CCFF00]" : "text-gray-500")} />
+                                                                    <Bot className={cn("w-5 h-5", selectedAgentId === agent.agent_id ? "text-slate-900" : "text-slate-500")} />
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="text-sm font-bold text-gray-900 truncate">{agent.name}</p>
-                                                                    <p className="text-[10px] text-gray-400 font-mono truncate">{agent.agent_id}</p>
+                                                                    <p className={cn("text-sm font-bold truncate", selectedAgentId === agent.agent_id ? "text-white" : "text-slate-900")}>{agent.name}</p>
+                                                                    <p className={cn("text-[10px] font-mono truncate mt-0.5", selectedAgentId === agent.agent_id ? "text-slate-400" : "text-slate-400")}>{agent.agent_id}</p>
                                                                 </div>
                                                                 {selectedAgentId === agent.agent_id && (
-                                                                    <CheckCircle2 className="w-4 h-4 text-slate-900 flex-shrink-0" />
+                                                                    <div className="w-6 h-6 rounded-full bg-[#CCFF00] flex items-center justify-center flex-shrink-0">
+                                                                        <Check className="w-3.5 h-3.5 text-slate-900" />
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex items-start gap-3">
-                                                        <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                                                        <p className="text-xs text-orange-700 font-medium">Agent bulunamadı. ElevenLabs panelinden agent oluşturun.</p>
+                                                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
+                                                        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                                        <p className="text-xs text-amber-700 font-medium">Agent bulunamadı. ElevenLabs panelinden agent oluşturun.</p>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Twilio Numara Seçimi */}
+                                            {/* Numara Seçimi */}
                                             <div>
-                                                <label className="text-sm font-semibold text-gray-700 mb-1.5 flex items-center justify-between">
-                                                    <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-slate-600" /> Twilio Numarası</span>
-                                                    <span className="text-[10px] bg-slate-900 text-[#CCFF00] px-2 py-0.5 rounded-full uppercase tracking-widest">ElevenLabs</span>
+                                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
+                                                    <span className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> Arama Numarası</span>
+                                                    <span className="text-[9px] bg-slate-900 text-[#CCFF00] px-2.5 py-1 rounded-full uppercase tracking-widest font-bold">ElevenLabs</span>
                                                 </label>
                                                 {phoneNumbers.length > 0 ? (
-                                                    <select className="input-base" value={selectedPhone} onChange={e => setSelectedPhone(e.target.value)}>
+                                                    <div className="space-y-2">
                                                         {phoneNumbers.map(p => (
-                                                            <option key={p.phone_number_id} value={p.phone_number_id}>
-                                                                {p.phone_number}{p.label ? ` (${p.label})` : ""}
-                                                            </option>
+                                                            <div key={p.phone_number_id}
+                                                                onClick={() => setSelectedPhone(p.phone_number_id)}
+                                                                className={cn(
+                                                                    "flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200",
+                                                                    selectedPhone === p.phone_number_id
+                                                                        ? "border-slate-900 bg-slate-950"
+                                                                        : "border-slate-100 hover:border-slate-300 bg-slate-50 hover:bg-white"
+                                                                )}>
+                                                                <div className={cn(
+                                                                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                                                                    selectedPhone === p.phone_number_id ? "bg-[#CCFF00]" : "bg-white border border-slate-200"
+                                                                )}>
+                                                                    <Phone className={cn("w-5 h-5", selectedPhone === p.phone_number_id ? "text-slate-900" : "text-slate-500")} />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className={cn("text-sm font-bold", selectedPhone === p.phone_number_id ? "text-white" : "text-slate-900")}>{p.phone_number}</p>
+                                                                    {p.label && <p className={cn("text-xs mt-0.5", selectedPhone === p.phone_number_id ? "text-slate-400" : "text-slate-400")}>{p.label}</p>}
+                                                                </div>
+                                                                {selectedPhone === p.phone_number_id && (
+                                                                    <div className="w-6 h-6 rounded-full bg-[#CCFF00] flex items-center justify-center flex-shrink-0">
+                                                                        <Check className="w-3.5 h-3.5 text-slate-900" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         ))}
-                                                    </select>
+                                                    </div>
                                                 ) : (
-                                                    <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex items-start gap-3">
-                                                        <XCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                                                    <div className="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start gap-3">
+                                                        <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                                                         <div>
-                                                            <p className="text-xs font-bold text-orange-800">Bağlı numara bulunamadı.</p>
-                                                            <p className="text-[10px] text-orange-600 mt-0.5 leading-relaxed">
-                                                                ElevenLabs panelinden Twilio numaranızı içe aktarın.
-                                                            </p>
+                                                            <p className="text-xs font-bold text-red-800">Bağlı numara bulunamadı</p>
+                                                            <p className="text-[10px] text-red-600 mt-0.5 leading-relaxed">ElevenLabs panelinden telefon numarası ekleyin.</p>
                                                         </div>
                                                     </div>
                                                 )}
@@ -587,46 +619,51 @@ export const CampaignsPage = () => {
 
                             {/* ── STEP 3: Özet & Başlat ── */}
                             {wizardStep === 3 && (
-                                <div className="space-y-5 flex-1">
-                                    {/* Summary Card */}
-                                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Kampanya Özeti</p>
-                                        {[
-                                            { label: "Kampanya Adı", value: newName, icon: FileText },
-                                            { label: "Numara Listesi", value: uploadedFile ? `${uploadedFile.name} — ${numberCount} numara` : "Dosya yüklenmedi", icon: FileSpreadsheet },
-                                            { label: "AI Agent", value: selectedAgentObj?.name || "Seçilmedi", icon: Bot },
-                                            { label: "Twilio Numarası", value: selectedPhoneObj?.phone_number || "Seçilmedi", icon: Phone },
-                                        ].map(row => (
-                                            <div key={row.label} className="flex items-center gap-3">
-                                                <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                                                    <row.icon className="w-3.5 h-3.5 text-slate-500" />
+                                <div className="space-y-6 flex-1">
+                                    {/* Dark Summary Card */}
+                                    <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Kampanya Özeti</p>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {[
+                                                { label: "Kampanya Adı", value: newName, icon: FileText },
+                                                { label: "Numara Listesi", value: uploadedFile ? `${numberCount} numara` : "Yüklenmedi", icon: FileSpreadsheet },
+                                                { label: "AI Agent", value: selectedAgentObj?.name || "Seçilmedi", icon: Bot },
+                                                { label: "Arama Numarası", value: selectedPhoneObj?.phone_number || "Seçilmedi", icon: Phone },
+                                            ].map(row => (
+                                                <div key={row.label} className="flex items-start gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                        <row.icon className="w-4 h-4 text-[#CCFF00]" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[10px] text-slate-500 font-medium">{row.label}</p>
+                                                        <p className="text-sm font-bold text-white truncate mt-0.5">{row.value}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-[10px] text-slate-400 font-medium">{row.label}</p>
-                                                    <p className="text-sm font-semibold text-slate-800 truncate">{row.value}</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {/* Daily Limit */}
                                     <div>
-                                        <label className="text-sm font-semibold text-gray-700 mb-2 block">Günlük Arama Limiti</label>
-                                        <div className="grid grid-cols-4 gap-2 mb-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Günlük Arama Limiti</label>
+                                        <div className="grid grid-cols-4 gap-2 mb-3">
                                             {[20, 50, 100, 500].map(limit => (
                                                 <button key={limit} onClick={() => setDailyLimit(limit)}
                                                     className={cn(
-                                                        "py-2 rounded-xl text-xs font-bold transition-all border",
-                                                        dailyLimit === limit ? "bg-slate-900 text-[#CCFF00] border-slate-900" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                                        "py-3 rounded-xl text-sm font-bold transition-all border-2",
+                                                        dailyLimit === limit
+                                                            ? "bg-slate-950 text-[#CCFF00] border-slate-900 shadow-lg"
+                                                            : "bg-slate-50 text-slate-600 border-slate-100 hover:border-slate-300"
                                                     )}>
                                                     {limit}
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Özel:</span>
-                                            <input className="input-base py-1.5 text-sm" type="number" value={dailyLimit}
+                                        <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2 border border-slate-200">
+                                            <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Özel limit:</span>
+                                            <input className="flex-1 bg-transparent text-sm font-bold text-slate-900 focus:outline-none" type="number" value={dailyLimit}
                                                 onChange={e => setDailyLimit(parseInt(e.target.value) || 0)} />
+                                            <span className="text-xs text-slate-400">arama/gün</span>
                                         </div>
                                     </div>
                                 </div>
@@ -634,9 +671,9 @@ export const CampaignsPage = () => {
                         </div>
 
                         {/* Wizard Footer */}
-                        <div className="px-8 pb-8 space-y-3">
+                        <div className="px-8 pb-8 space-y-3 bg-white border-t border-slate-100 pt-5">
                             {saveError && (
-                                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
+                                <div className="flex items-center gap-2 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium">
                                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
                                     {saveError}
                                 </div>
@@ -644,12 +681,12 @@ export const CampaignsPage = () => {
                             <div className="flex gap-3">
                                 {wizardStep > 1 ? (
                                     <button onClick={() => setWizardStep(s => s - 1)} disabled={isSaving}
-                                        className="flex items-center gap-1.5 px-5 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                                        className="flex items-center gap-1.5 px-6 py-3.5 rounded-2xl border-2 border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50">
                                         <ChevronLeft className="w-4 h-4" /> Geri
                                     </button>
                                 ) : (
                                     <button onClick={handleCloseModal}
-                                        className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                                        className="px-6 py-3.5 rounded-2xl border-2 border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
                                         İptal
                                     </button>
                                 )}
@@ -658,21 +695,21 @@ export const CampaignsPage = () => {
                                     <button onClick={handleNext}
                                         disabled={wizardStep === 1 && !step1Valid}
                                         className={cn(
-                                            "flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl text-sm font-bold transition-all",
+                                            "flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all",
                                             (wizardStep === 1 && !step1Valid)
-                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                : "btn-primary"
+                                                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                                : "bg-slate-950 text-[#CCFF00] hover:bg-slate-800 shadow-lg shadow-slate-900/20"
                                         )}>
                                         İleri <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
-                                    <div className="flex-1 flex gap-2">
+                                    <div className="flex-1 flex gap-3">
                                         <button onClick={() => handleSaveCampaign("draft")} disabled={isSaving}
-                                            className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                                            className="flex-1 py-3.5 rounded-2xl border-2 border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50">
                                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Taslak Kaydet"}
                                         </button>
                                         <button onClick={() => handleSaveCampaign("active")} disabled={isSaving}
-                                            className="flex-1 py-3 rounded-2xl btn-primary text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                            className="flex-1 py-3.5 rounded-2xl bg-slate-950 text-[#CCFF00] text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-all disabled:opacity-50">
                                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4" /> Başlat</>}
                                         </button>
                                     </div>
