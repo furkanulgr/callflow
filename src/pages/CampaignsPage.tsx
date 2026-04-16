@@ -383,7 +383,10 @@ export const CampaignsPage = () => {
                                                 Detay
                                             </button>
                                             {c.status !== "active" && (
-                                                <button onClick={() => setCampaignList(prev => prev.filter(camp => camp.id !== c.id))}
+                                                <button onClick={async () => {
+                                                    await supabase.from("campaigns").delete().eq("id", c.id);
+                                                    setCampaignList(prev => prev.filter(camp => camp.id !== c.id));
+                                                }}
                                                     className="flex items-center justify-center px-3 py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-all active:scale-[0.98]"
                                                     title="Sil">
                                                     <Trash2 className="w-4 h-4" />
