@@ -377,10 +377,14 @@ export const DashboardPage = () => {
                                                     <CallTypeIcon type={call.type} status={call.status} />
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-3 mb-1.5">
-                                                            <p className="text-base font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{call.name}</p>
+                                                            <p className="text-base font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                                                                {call.phone && call.phone !== "–" ? call.phone : call.name}
+                                                            </p>
                                                             <TagBadge tag={call.tag} />
                                                         </div>
-                                                        <p className="text-sm text-gray-500 font-mono tracking-tight">{call.phone}</p>
+                                                        <p className="text-sm text-gray-500 font-mono tracking-tight">
+                                                            {call.phone && call.phone !== "–" ? call.name : <span className="text-slate-300 italic text-xs">numara yükleniyor...</span>}
+                                                        </p>
                                                     </div>
                                                     <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                                                         {call.status === "missed" ? (
@@ -943,7 +947,15 @@ const AnalyticsModal = ({ onClose }: { onClose: () => void }) => {
                     <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
                         <div className="mb-6">
                             <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">Görüşme Analizi</h2>
-                            <p className="text-xs text-slate-400 font-mono truncate">{selectedDetail.conversation_id}</p>
+                            <div className="flex items-center gap-3 mt-1">
+                                {selectedDetail.metadata?.phone_call?.external_number && (
+                                    <span className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                        {selectedDetail.metadata.phone_call.external_number}
+                                    </span>
+                                )}
+                                <p className="text-xs text-slate-400 font-mono truncate">{selectedDetail.conversation_id}</p>
+                            </div>
                         </div>
 
                         {/* Audio Player Row */}
