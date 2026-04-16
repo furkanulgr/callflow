@@ -238,7 +238,7 @@ export const getPhoneNumbers = async (): Promise<PhoneNumberItem[]> => {
     }
 
     const data = await response.json();
-    return data.phone_numbers || [];
+    return Array.isArray(data) ? data : (data.phone_numbers || []);
 };
 
 /**
