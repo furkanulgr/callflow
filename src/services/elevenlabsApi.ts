@@ -318,20 +318,39 @@ export const startBatchCalling = async (
     const apiKey = getApiKey();
     if (!apiKey) throw new Error("VITE_ELEVENLABS_API_KEY is missing in .env");
 
-    const formData = new FormData();
-    formData.append("agent_id", agentId);
-    formData.append("phone_number_id", phoneNumberId);
-    formData.append("file", csvFile, csvFile.name);
-    if (batchName) formData.append("batch_name", batchName);
+    // CSV dosyasını parse et
+    const csvText = await csvFile.text();
+    const lines = csvText.trim().split("\n");
+    const headers = lines[0].split(",").map(h => h.trim());
+    const phoneIndex = headers.findIndex(h => h === "phone_number");
 
-    const response = await fetch(`${API_BASE}/v1/convai/batches`, {
-        method: "POST",
-        headers: {
-            "xi-api-key": apiKey,
-            // NOT setting Content-Type — browser sets it automatically with boundary for FormData
-        },
-        body: formData,
-    });
+    const recipients = lines.slice(1).map(line => {
+        const values = line.split(",").map(v => v.trim());
+        const recipient: Record<string, string> = {};
+        headers.forEach((h, i) => {
+            if (values[i]) recipient[h] = values[i];
+        });
+        // Sadece phone_number varsa da çalışsın
+        if (phoneIndex === -1 && values[0]) {
+            recipient["phone_number"] = values[0];
+        }
+        return recipient;
+    }).filter(r => r.phone_number);
+
+    const response = await fetch(
+        `${API_BASE}/v1/convai/agents/${agentId}/phone-numbers/${phoneNumberId}/batch-calls`,
+        {
+            method: "POST",
+            headers: {
+                "xi-api-key": apiKey,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                recipients,
+                ...(batchName && { batch_name: batchName }),
+            }),
+        }
+    );
 
     if (!response.ok) {
         const errorText = await response.text();
