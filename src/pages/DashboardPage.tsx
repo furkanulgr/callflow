@@ -142,6 +142,11 @@ export const DashboardPage = () => {
     const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
     const [isCallingNow, setIsCallingNow] = useState(false);
     const [newCallForm, setNewCallForm] = useState({ name: "", phone: "", reason: "" });
+    const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
+    const [loadingDetail, setLoadingDetail] = useState(false);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [audioPlaying, setAudioPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         setIsLoadingCalls(true);
@@ -167,6 +172,37 @@ export const DashboardPage = () => {
             .catch(() => setCalls([]))
             .finally(() => setIsLoadingCalls(false));
     }, []);
+
+    useEffect(() => {
+        if (!selectedCall?.conversationId) {
+            setSelectedDetail(null);
+            setAudioUrl(null);
+            setAudioPlaying(false);
+            return;
+        }
+        setLoadingDetail(true);
+        setSelectedDetail(null);
+        setAudioUrl(null);
+        setAudioPlaying(false);
+        getConversationDetails(selectedCall.conversationId)
+            .then(detail => setSelectedDetail(detail))
+            .catch(() => {})
+            .finally(() => setLoadingDetail(false));
+        getConversationAudio(selectedCall.conversationId)
+            .then(url => setAudioUrl(url))
+            .catch(() => {});
+    }, [selectedCall]);
+
+    const toggleAudio = () => {
+        if (!audioRef.current) return;
+        if (audioPlaying) {
+            audioRef.current.pause();
+            setAudioPlaying(false);
+        } else {
+            audioRef.current.play();
+            setAudioPlaying(true);
+        }
+    };
 
     const handleQuickCall = async () => {
         try {
@@ -498,31 +534,35 @@ export const DashboardPage = () => {
                             <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white shadow-xl relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-transform group-hover:scale-110 duration-700"></div>
                                 <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
-                                    <Volume2 className="w-4 h-4 text-[#CCFF00]" /> Görüşme Kaydı (Retell AI)
+                                    <Volume2 className="w-4 h-4 text-[#CCFF00]" /> Ses Kaydı
                                 </h3>
                                 <div className="flex items-center gap-6 relative z-10">
-                                    <button className="w-12 h-12 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-[#CCFF00]/20">
-                                        <Play className="w-5 h-5 ml-1" />
-                                    </button>
-                                    <div className="flex-1 min-w-0">
-                                        {/* Fake Waveform */}
-                                        <div className="flex items-center gap-1 h-12 w-full opacity-80 overflow-hidden px-1">
-                                            {Array.from({ length: 90 }).map((_, i) => {
-                                                const height = 15 + Math.random() * 85;
-                                                return (
-                                                    <div
-                                                        key={i}
-                                                        className="flex-1 bg-white rounded-full transition-all duration-300 hover:bg-[#CCFF00] cursor-pointer"
-                                                        style={{ height: `${height}%`, opacity: Math.random() * 0.4 + 0.3, minWidth: "2px" }}
-                                                    />
-                                                );
-                                            })}
+                                    {audioUrl ? (
+                                        <>
+                                            <audio ref={audioRef} src={audioUrl} onEnded={() => setAudioPlaying(false)} className="hidden" />
+                                            <button onClick={toggleAudio} className="w-12 h-12 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-[#CCFF00]/20">
+                                                {audioPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+                                            </button>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-1 h-12 w-full overflow-hidden px-1">
+                                                    {Array.from({ length: 90 }).map((_, i) => (
+                                                        <div key={i} className="flex-1 bg-white rounded-full transition-all duration-300" style={{ height: `${10 + Math.sin(i * 0.7) * 40 + Math.cos(i * 1.3) * 30 + 40}%`, opacity: audioPlaying ? 0.6 + Math.sin(i * 0.5) * 0.3 : 0.2, minWidth: "2px" }} />
+                                                    ))}
+                                                </div>
+                                                <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-3 font-mono">
+                                                    <span>00:00</span>
+                                                    <span>{formatDuration(selectedCall.duration)}</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : loadingDetail ? (
+                                        <div className="flex items-center gap-3 text-slate-400">
+                                            <Loader2 className="w-5 h-5 animate-spin text-[#CCFF00]" />
+                                            <span className="text-sm font-medium">Ses kaydı yükleniyor...</span>
                                         </div>
-                                        <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-3 font-mono">
-                                            <span>00:00</span>
-                                            <span>{formatDuration(selectedCall.duration)}</span>
-                                        </div>
-                                    </div>
+                                    ) : (
+                                        <p className="text-sm text-slate-500 font-medium">Bu görüşme için ses kaydı mevcut değil.</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -530,47 +570,43 @@ export const DashboardPage = () => {
                             <div className="bg-white rounded-[1.5rem] border border-gray-200/60 p-6 shadow-sm">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                        <MessageSquare className="w-4 h-4 text-gray-400" /> Canlı Transkript
+                                        <MessageSquare className="w-4 h-4 text-gray-400" /> Transkript
                                     </h3>
-
-                                    {/* AI Summary Banner */}
-                                    <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
-                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                        <p className="text-[11px] font-bold text-amber-800">
-                                            Özet: {selectedCall.summary}
-                                        </p>
-                                    </div>
+                                    {selectedCall.summary && selectedCall.summary !== "Özet henüz oluşturulmadı." && (
+                                        <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
+                                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                            <p className="text-[11px] font-bold text-amber-800 max-w-[300px] truncate">
+                                                {selectedCall.summary}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
-                                <div className="space-y-5">
-                                    {/* Fake Chat Messages */}
-                                    <div className="flex gap-4">
-                                        <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-md mt-1">
-                                            <Bot className="w-5 h-5 text-[#CCFF00]" />
-                                        </div>
-                                        <div className="bg-gray-100 rounded-[1.5rem] rounded-tl-sm p-4 px-5 text-[15px] text-gray-800 font-medium max-w-[85%] leading-relaxed border border-gray-200/50">
-                                            Merhaba {selectedCall.name}, ben LUERA. Dünkü görüşmemize istinaden sizi arıyorum. Nasılsınız?
-                                        </div>
+                                {loadingDetail && !selectedDetail ? (
+                                    <div className="flex items-center justify-center gap-3 py-10 text-gray-400">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span className="text-sm font-medium">Transkript yükleniyor...</span>
                                     </div>
-
-                                    <div className="flex gap-4 flex-row-reverse">
-                                        <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
-                                            <User className="w-5 h-5 text-blue-600" />
-                                        </div>
-                                        <div className="bg-blue-600 text-white rounded-[1.5rem] rounded-tr-sm p-4 px-5 text-[15px] font-medium max-w-[85%] shadow-md leading-relaxed">
-                                            İyiyim teşekkürler. Evet paketlerinizi inceledim. Fiyatlar biraz yüksek geldi ama içeriği çok beğendim.
-                                        </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {selectedDetail?.transcript?.map((msg: any, i: number) => {
+                                            const isAgent = msg.role === "agent";
+                                            return (
+                                                <div key={i} className={cn("flex gap-4", !isAgent && "flex-row-reverse")}>
+                                                    <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md mt-1", isAgent ? "bg-slate-900" : "bg-blue-50 border border-blue-100")}>
+                                                        {isAgent ? <Bot className="w-5 h-5 text-[#CCFF00]" /> : <User className="w-5 h-5 text-blue-600" />}
+                                                    </div>
+                                                    <div className={cn("rounded-[1.5rem] p-4 px-5 text-[15px] font-medium max-w-[85%] leading-relaxed", isAgent ? "bg-gray-100 text-gray-800 rounded-tl-sm border border-gray-200/50" : "bg-blue-600 text-white rounded-tr-sm shadow-md")}>
+                                                        {msg.message || msg.text || "(Boş mesaj)"}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {!selectedDetail?.transcript?.length && (
+                                            <p className="text-sm text-gray-400 text-center py-8">Transkript bulunamadı.</p>
+                                        )}
                                     </div>
-
-                                    <div className="flex gap-4">
-                                        <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-md mt-1">
-                                            <Bot className="w-5 h-5 text-[#CCFF00]" />
-                                        </div>
-                                        <div className="bg-gray-100 rounded-[1.5rem] rounded-tl-sm p-4 px-5 text-[15px] text-gray-800 font-medium max-w-[85%] leading-relaxed border border-gray-200/50">
-                                            Anlıyorum. İçeriği beğenmeniz harika. Eğer isterseniz, bütçenize daha uygun olan Başlangıç paketimizi size detaylıca anlatabilirim. Ne dersiniz?
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
                         </div>

@@ -10,7 +10,7 @@ import Papa from "papaparse";
 import { cn } from "@/utils/cn";
 import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
 import { AgentPromptEditor } from "@/components/AgentPromptEditor";
-import { getPhoneNumbers, PhoneNumberItem, getAgents, AgentListItem, startBatchCalling } from "@/services/elevenlabsApi";
+import { getPhoneNumbers, PhoneNumberItem, getAgents, AgentListItem, startBatchCalling, getConversations } from "@/services/elevenlabsApi";
 import { supabase } from "@/lib/supabase";
 
 type CampaignStatus = "active" | "paused" | "completed" | "draft";
@@ -71,15 +71,46 @@ export const CampaignsPage = () => {
     const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(null);
     const [voiceDemoCampaign, setVoiceDemoCampaign] = useState<CampaignRow | null>(null);
 
-    // Supabase'den kampanyaları çek
+    // Supabase'den kampanyaları çek, sonra ElevenLabs'ten gerçek istatistikleri güncelle
     useEffect(() => {
         supabase
             .from("campaigns")
             .select("*")
             .order("created_at", { ascending: false })
-            .then(({ data, error }) => {
-                if (!error && data) setCampaignList(data.map(mapDbCampaign));
-                setIsLoadingCampaigns(false);
+            .then(async ({ data, error }) => {
+                if (!error && data) {
+                    const mapped = data.map(mapDbCampaign);
+                    setCampaignList(mapped);
+                    setIsLoadingCampaigns(false);
+
+                    // Her kampanya için ElevenLabs'ten gerçek istatistik çek
+                    const agentIds = [...new Set(mapped.map(c => c.agentId).filter(Boolean))];
+                    const convMap: Record<string, any[]> = {};
+                    await Promise.allSettled(
+                        agentIds.map(async (agentId) => {
+                            try {
+                                const convs = await getConversations(agentId);
+                                convMap[agentId] = convs;
+                            } catch {}
+                        })
+                    );
+
+                    setCampaignList(prev => prev.map(c => {
+                        if (!c.agentId || !convMap[c.agentId]) return c;
+                        const campaignCreatedAt = new Date(data.find(d => d.id === c.id)?.created_at || 0).getTime() / 1000;
+                        const convs = convMap[c.agentId].filter(
+                            conv => (conv.start_time_unix_secs || 0) >= campaignCreatedAt - 60
+                        );
+                        const called = convs.length;
+                        const answered = convs.filter(conv =>
+                            (conv.call_duration_secs ?? 0) > 0 && conv.status !== "failed"
+                        ).length;
+                        const progress = c.total > 0 ? Math.round((called / c.total) * 100) : 0;
+                        return { ...c, called, answered, progress };
+                    }));
+                } else {
+                    setIsLoadingCampaigns(false);
+                }
             });
     }, []);
 
