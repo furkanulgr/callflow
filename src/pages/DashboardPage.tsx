@@ -146,7 +146,24 @@ export const DashboardPage = () => {
     useEffect(() => {
         setIsLoadingCalls(true);
         getConversations()
-            .then(data => setCalls(data.map(mapConversation)))
+            .then(async (data) => {
+                const mapped = data.map(mapConversation);
+                setCalls(mapped);
+                setIsLoadingCalls(false);
+
+                // Arka planda her konuşmanın detayını çekip telefon numarasını güncelle
+                const details = await Promise.allSettled(
+                    mapped.slice(0, 20).map(c => getConversationDetails(c.conversationId))
+                );
+                setCalls(prev => prev.map((call, i) => {
+                    const result = details[i];
+                    if (result?.status === "fulfilled") {
+                        const phone = result.value?.metadata?.phone_call?.external_number;
+                        if (phone) return { ...call, phone, name: call.name === "Bilinmeyen Numara" ? phone : call.name };
+                    }
+                    return call;
+                }));
+            })
             .catch(() => setCalls([]))
             .finally(() => setIsLoadingCalls(false));
     }, []);
