@@ -1,9 +1,8 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
     Phone, PhoneMissed, ArrowDownLeft, ArrowUpRight,
     Mic, Sparkles, TrendingUp, ChevronRight, Circle,
-    Radio, CheckCircle2, CalendarCheck,
-    Zap, Lightbulb, Clock,
+    CheckCircle2, Zap, Clock,
     X, Play, Pause, Volume2, MessageSquare, Bot, User,
     Flame, Snowflake, RefreshCw, Power, PhoneOff, Loader2
 } from "lucide-react";
@@ -29,14 +28,6 @@ interface CallRecord {
     conversationId?: string;
 }
 
-interface QueueItem {
-    id: number;
-    name: string;
-    phone: string;
-    scheduledFor: Date;
-    reason: string;
-}
-
 /* ───── SKELETON ───── */
 const SkeletonCallRow = () => (
     <div className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl animate-pulse">
@@ -52,36 +43,65 @@ const SkeletonCallRow = () => (
 );
 
 /* ───── MAP ElevenLabs conversation → CallRecord ───── */
-const mapConversation = (conv: any): CallRecord => ({
-    id: conv.conversation_id,
-    conversationId: conv.conversation_id,
-    name: conv.call_summary_title || conv.metadata?.phone_number || conv.metadata?.caller_id || "Bilinmeyen Numara",
-    phone: conv.metadata?.phone_number || conv.metadata?.to_number || "–",
-    type: conv.direction === "inbound" ? "incoming" : "outgoing",
-    status: conv.call_successful === "failure" || conv.status === "failed" ? "missed" : "answered",
-    tag: "cold",
-    duration: conv.call_duration_secs ?? 0,
-    time: new Date((conv.start_time_unix_secs ?? Date.now() / 1000) * 1000),
-    summary: conv.transcript_summary || conv.analysis?.transcript_summary || conv.metadata?.summary || "Özet henüz oluşturulmadı.",
-});
+const mapConversation = (conv: any): CallRecord => {
+    // ElevenLabs returns call_successful as "success" | "failure" | null
+    const isFailed =
+        conv.call_successful === "failure" ||
+        conv.call_successful === false ||
+        conv.status === "failed" ||
+        conv.status === "error";
+
+    // Duration — try multiple fields
+    const duration =
+        conv.call_duration_secs ??
+        conv.duration_secs ??
+        conv.duration ??
+        0;
+
+    // Phone number — several locations ElevenLabs may place it
+    const phone =
+        conv.metadata?.phone_number ||
+        conv.metadata?.to_number ||
+        conv.metadata?.caller_id ||
+        conv.from_number ||
+        conv.to_number ||
+        "–";
+
+    // Display name — prefer a human summary title, fall back to phone
+    const name =
+        conv.call_summary_title ||
+        conv.summary_title ||
+        phone;
+
+    // Call summary text
+    const summary =
+        conv.transcript_summary ||
+        conv.analysis?.transcript_summary ||
+        conv.metadata?.summary ||
+        "Özet henüz oluşturulmadı.";
+
+    // Start time
+    const startTime = conv.start_time_unix_secs
+        ? new Date(conv.start_time_unix_secs * 1000)
+        : conv.created_at
+            ? new Date(conv.created_at)
+            : new Date();
+
+    return {
+        id: conv.conversation_id,
+        conversationId: conv.conversation_id,
+        name,
+        phone,
+        type: conv.direction === "inbound" ? "incoming" : "outgoing",
+        status: isFailed || duration === 0 ? "missed" : "answered",
+        tag: "cold",
+        duration,
+        time: startTime,
+        summary,
+    };
+};
 
 /* ───── SUB-COMPONENTS ───── */
-const Waveform = ({ active }: { active: boolean }) => (
-    <div className="flex items-center gap-[3px] h-10">
-        {Array.from({ length: 18 }).map((_, i) => (
-            <div key={i}
-                className={cn("w-[3px] rounded-full wave-bar", active ? "wave-bar-active" : "")}
-                style={{
-                    background: active ? "#CCFF00" : "rgba(255,255,255,0.2)",
-                    animationDelay: `${(i * 60) % 900}ms`,
-                    minHeight: "4px", maxHeight: "100%",
-                    height: active ? undefined : `${10 + Math.sin(i * 0.9) * 8}%`,
-                }}
-            />
-        ))}
-    </div>
-);
-
 const CallTypeIcon = ({ type, status }: { type: string; status: string }) => {
     if (status === "missed")
         return <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center"><PhoneMissed className="w-4 h-4 text-red-500" /></div>;
@@ -96,82 +116,63 @@ const TagBadge = ({ tag }: { tag: "hot" | "warm" | "cold" }) => {
     return <span className="badge-cold"><Snowflake className="w-3 h-3" /> Soğuk</span>;
 };
 
-/* ───── CAROUSEL CARD (exactly like LeadFlow) ───── */
-const CarouselCard = ({ slides, interval = 6000 }: { slides: { icon: React.ReactNode; label: string; value: React.ReactNode; sub: React.ReactNode }[]; interval?: number }) => {
-    const [idx, setIdx] = useState(0);
-    useEffect(() => {
-        const t = setInterval(() => setIdx(p => p + 1), interval);
-        return () => clearInterval(t);
-    }, [interval]);
-    const slide = slides[idx % slides.length];
-    return (
-        <div className="flex-1 min-w-0 group relative rounded-2xl p-5 bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-            {/* Slide dots */}
-            <div className="absolute top-2.5 right-5 flex gap-1">
-                {slides.map((_, i) => (
-                    <div key={i} className={cn(
-                        "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                        i === idx % slides.length ? "bg-slate-900 w-3" : "bg-gray-300"
-                    )} />
-                ))}
-            </div>
-            <div className="relative h-[88px]">
-                <div key={idx} className="absolute inset-0 animate-slideUp">
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-[11px] font-semibold text-gray-400 tracking-wider uppercase">{slide.label}</p>
-                        <div className="p-2.5 rounded-xl bg-slate-900">{slide.icon}</div>
-                    </div>
-                    <h3 className="text-3xl font-bold text-gray-900 tracking-tight whitespace-nowrap">{slide.value}</h3>
-                    <div className="mt-2 flex items-center gap-1 whitespace-nowrap">{slide.sub}</div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 /* ───── MAIN PAGE ───── */
 export const DashboardPage = () => {
-    const [aiActive, setAiActive] = useState(true);
-    const [activeTab, setActiveTab] = useState<"past" | "queue">("past");
     const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
     const [calls, setCalls] = useState<CallRecord[]>([]);
     const [isLoadingCalls, setIsLoadingCalls] = useState(true);
-    const [callQueue, setCallQueue] = useState<QueueItem[]>([]);
+    const [callsError, setCallsError] = useState<string | null>(null);
     const [isNewCallModalOpen, setIsNewCallModalOpen] = useState(false);
-    const [isDirectCallModalOpen, setIsDirectCallModalOpen] = useState(false);
-    const [isCallingNow, setIsCallingNow] = useState(false);
-    const [newCallForm, setNewCallForm] = useState({ name: "", phone: "", reason: "" });
     const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [audioPlaying, setAudioPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    useEffect(() => {
+    const fetchCalls = useCallback(async () => {
         setIsLoadingCalls(true);
-        getConversations()
-            .then(async (data) => {
-                const mapped = data.map(mapConversation);
-                setCalls(mapped);
-                setIsLoadingCalls(false);
+        setCallsError(null);
+        try {
+            const data = await getConversations();
+            const mapped = data.map(mapConversation);
+            setCalls(mapped);
+            setIsLoadingCalls(false);
 
-                // Arka planda her konuşmanın detayını çekip telefon numarasını güncelle
-                const details = await Promise.allSettled(
-                    mapped.slice(0, 20).map(c => getConversationDetails(c.conversationId))
-                );
-                setCalls(prev => prev.map((call, i) => {
-                    const result = details[i];
-                    if (result?.status === "fulfilled") {
-                        const phone = result.value?.metadata?.phone_call?.external_number;
-                        if (phone) return { ...call, phone, name: call.name === "Bilinmeyen Numara" ? phone : call.name };
+            // Background: enrich first 20 calls with exact phone number from detail API
+            const details = await Promise.allSettled(
+                mapped.slice(0, 20).map(c =>
+                    c.conversationId ? getConversationDetails(c.conversationId) : Promise.resolve(null)
+                )
+            );
+            setCalls(prev => prev.map((call, i) => {
+                const result = details[i];
+                if (result?.status === "fulfilled" && result.value) {
+                    const phone =
+                        result.value?.metadata?.phone_call?.external_number ||
+                        result.value?.metadata?.to_number ||
+                        result.value?.metadata?.phone_number;
+                    if (phone) {
+                        return {
+                            ...call,
+                            phone,
+                            name: call.name === "–" || call.name === call.phone ? phone : call.name,
+                        };
                     }
-                    return call;
-                }));
-            })
-            .catch(() => setCalls([]))
-            .finally(() => setIsLoadingCalls(false));
+                }
+                return call;
+            }));
+        } catch (err: any) {
+            setCallsError("Çağrı verileri yüklenirken bir hata oluştu.");
+            setCalls([]);
+            setIsLoadingCalls(false);
+        }
     }, []);
 
+    useEffect(() => {
+        fetchCalls();
+    }, [fetchCalls]);
+
+    // Load call detail + audio when a call is selected
     useEffect(() => {
         if (!selectedCall?.conversationId) {
             setSelectedDetail(null);
@@ -183,13 +184,15 @@ export const DashboardPage = () => {
         setSelectedDetail(null);
         setAudioUrl(null);
         setAudioPlaying(false);
+
         getConversationDetails(selectedCall.conversationId)
             .then(detail => setSelectedDetail(detail))
-            .catch(() => {})
+            .catch(() => setSelectedDetail(null))
             .finally(() => setLoadingDetail(false));
+
         getConversationAudio(selectedCall.conversationId)
             .then(url => setAudioUrl(url))
-            .catch(() => {});
+            .catch(() => setAudioUrl(null));
     }, [selectedCall]);
 
     const toggleAudio = () => {
@@ -201,47 +204,6 @@ export const DashboardPage = () => {
             audioRef.current.play();
             setAudioPlaying(true);
         }
-    };
-
-    const handleQuickCall = async () => {
-        try {
-            setIsCallingNow(true);
-            const response = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound-call', {
-                method: 'POST',
-                headers: {
-                    'xi-api-key': import.meta.env.VITE_LUNA_API_KEY,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    to_number: import.meta.env.VITE_QUICK_CALL_TEST_NUMBER,
-                    agent_id: import.meta.env.VITE_LUNA_AGENT_ID,
-                    agent_phone_number_id: import.meta.env.VITE_ELEVENLABS_PHONE_NUMBER_ID
-                })
-            });
-            if (response.ok) alert("🤖 Otonom Arama Başlatıldı! Lütfen telefonu açınız.");
-            else alert("Hata: " + await response.text());
-        } catch(e: any) {
-            alert("Arama hatası: " + e.message);
-        } finally {
-            setIsCallingNow(false);
-        }
-    };
-
-    const handleAddNewCall = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newCallForm.name || !newCallForm.phone) return;
-
-        const newItem = {
-            id: Date.now(),
-            name: newCallForm.name,
-            phone: newCallForm.phone,
-            reason: newCallForm.reason || "Genel Arama",
-            scheduledFor: new Date(Date.now() + 60_000) // Scheduled for 1 min from now
-        };
-
-        setCallQueue(prev => [newItem, ...prev]);
-        setNewCallForm({ name: "", phone: "", reason: "" });
-        setIsNewCallModalOpen(false);
     };
 
     const { user } = useAuth();
@@ -261,6 +223,7 @@ export const DashboardPage = () => {
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+
     return (
         <>
             <div className="p-4 md:p-6">
@@ -363,9 +326,9 @@ export const DashboardPage = () => {
                     </div>
 
                 </div>
-                <div className="grid grid-cols-1 gap-6">
 
-                    {/* Full width — Call log */}
+                {/* ── CALL LOG ── */}
+                <div className="grid grid-cols-1 gap-6">
                     <div className="w-full">
                         <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm">
                             <div className="px-6 py-5 border-b border-gray-100">
@@ -374,141 +337,102 @@ export const DashboardPage = () => {
                                         <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                                             Çağrı Kayıtları
                                             <span className="px-2 py-0.5 bg-slate-900 text-[#CCFF00] rounded-md text-xs font-bold">
-                                                {activeTab === "past" ? (isLoadingCalls ? "..." : calls.length) : callQueue.length}
+                                                {isLoadingCalls ? "..." : calls.length}
                                             </span>
                                         </h2>
-                                        <p className="text-sm text-gray-500 mt-0.5">AI destekli gerçek zamanlı çağrı akışı ve kuyruk</p>
+                                        <p className="text-sm text-gray-500 mt-0.5">ElevenLabs üzerinden gerçek zamanlı çağrı verisi</p>
                                     </div>
 
-                                    {/* Tabs & Actions */}
-                                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                                        <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 border border-gray-200/50 rounded-xl">
-                                            <button
-                                                onClick={() => setActiveTab("past")}
-                                                className={cn(
-                                                    "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                                    activeTab === "past"
-                                                        ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                                                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
-                                                )}
-                                            >
-                                                Geçmiş Çağrılar
-                                            </button>
-                                            <button
-                                                onClick={() => setActiveTab("queue")}
-                                                className={cn(
-                                                    "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                                                    activeTab === "queue"
-                                                        ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                                                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
-                                                )}
-                                            >
-                                                Bekleyen Kuyruk
-                                            </button>
-                                        </div>
-
-
-                                    </div>
+                                    {/* Refresh Button */}
+                                    <button
+                                        onClick={fetchCalls}
+                                        disabled={isLoadingCalls}
+                                        className={cn(
+                                            "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all",
+                                            isLoadingCalls
+                                                ? "border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed"
+                                                : "border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm"
+                                        )}
+                                    >
+                                        <RefreshCw className={cn("w-3.5 h-3.5", isLoadingCalls && "animate-spin")} />
+                                        Yenile
+                                    </button>
                                 </div>
                             </div>
+
                             <div className="p-4 md:p-6 bg-gray-50/50 rounded-b-2xl">
                                 <div className="space-y-3 max-h-[calc(100vh-380px)] overflow-y-auto pr-2 custom-scrollbar">
-                                    {activeTab === "past" ? (
-                                        isLoadingCalls ? (
-                                            Array.from({ length: 4 }).map((_, i) => <SkeletonCallRow key={i} />)
-                                        ) : calls.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center py-16 text-center">
-                                                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-                                                    <Phone className="w-7 h-7 text-gray-300" />
-                                                </div>
-                                                <p className="text-sm font-bold text-gray-500">Henüz çağrı kaydı yok</p>
-                                                <p className="text-xs text-gray-400 mt-1">İlk kampanyanızı başlatarak çağrı geçmişi oluşturun</p>
+                                    {isLoadingCalls ? (
+                                        Array.from({ length: 4 }).map((_, i) => <SkeletonCallRow key={i} />)
+                                    ) : callsError ? (
+                                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                                            <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
+                                                <PhoneMissed className="w-7 h-7 text-red-300" />
                                             </div>
-                                        ) : (
-                                            calls.map((call) => (
-                                                <div key={call.id}
-                                                    onClick={() => setSelectedCall(call)}
-                                                    className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-all shadow-sm hover:shadow-md cursor-pointer group">
-                                                    <CallTypeIcon type={call.type} status={call.status} />
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-3 mb-1.5">
-                                                            <p className="text-base font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                                                                {call.phone && call.phone !== "–" ? call.phone : call.name}
-                                                            </p>
-                                                            <TagBadge tag={call.tag} />
-                                                        </div>
-                                                        <p className="text-sm text-gray-500 font-mono tracking-tight">
-                                                            {call.phone && call.phone !== "–" ? call.name : <span className="text-slate-300 italic text-xs">numara yükleniyor...</span>}
-                                                        </p>
-                                                    </div>
-                                                    <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-                                                        {call.status === "missed" ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100">
-                                                                <Circle className="w-2 h-2 fill-current" /> Cevapsız
-                                                            </span>
-                                                        ) : call.type === "incoming" ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
-                                                                <Circle className="w-2 h-2 fill-current" /> Gelen
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#CCFF00]/10 text-lime-700 text-xs font-bold border border-[#CCFF00]/20">
-                                                                <Circle className="w-2 h-2 fill-current" /> Giden
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="hidden lg:flex items-start gap-2.5 max-w-[320px] bg-slate-50/80 border border-slate-100 rounded-xl p-3">
-                                                        <Sparkles className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                                                        <p className="text-xs text-slate-600 font-medium leading-relaxed line-clamp-2">{call.summary}</p>
-                                                    </div>
-                                                    <div className="hidden md:flex flex-col items-end flex-shrink-0 w-24">
-                                                        <p className="text-sm font-bold text-slate-900">{call.duration > 0 ? formatDuration(call.duration) : "–"}</p>
-                                                        <p className="text-xs text-slate-400 font-medium mt-1">{getTimeAgo(call.time)}</p>
-                                                    </div>
-                                                    <div className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <ChevronRight className="w-5 h-5 text-gray-300" />
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )
+                                            <p className="text-sm font-bold text-gray-500">{callsError}</p>
+                                            <button
+                                                onClick={fetchCalls}
+                                                className="mt-4 text-xs font-bold text-blue-600 hover:underline"
+                                            >
+                                                Tekrar dene
+                                            </button>
+                                        </div>
+                                    ) : calls.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                                            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                                                <Phone className="w-7 h-7 text-gray-300" />
+                                            </div>
+                                            <p className="text-sm font-bold text-gray-500">Henüz çağrı kaydı yok</p>
+                                            <p className="text-xs text-gray-400 mt-1">İlk kampanyanızı başlatarak çağrı geçmişi oluşturun</p>
+                                        </div>
                                     ) : (
-                                        callQueue.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center py-16 text-center">
-                                                <div className="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mb-4">
-                                                    <CalendarCheck className="w-7 h-7 text-[#CCFF00]" />
-                                                </div>
-                                                <p className="text-sm font-bold text-gray-500">Kuyruğa alınan çağrı yok</p>
-                                                <p className="text-xs text-gray-400 mt-1">Kampanya başlatarak kuyruğu doldurun</p>
-                                            </div>
-                                        ) : (
-                                            callQueue.map((item) => (
-                                                <div key={item.id}
-                                                    className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl hover:border-[#CCFF00]/50 transition-all shadow-sm hover:shadow-md cursor-pointer group">
-                                                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0 shadow-sm">
-                                                        <CalendarCheck className="w-5 h-5 text-[#CCFF00]" />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-3 mb-1.5">
-                                                            <p className="text-base font-bold text-gray-900 truncate">{item.name}</p>
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-orange-50 text-orange-700 text-[10px] font-bold border border-orange-100 uppercase tracking-widest">Bekliyor</span>
-                                                        </div>
-                                                        <p className="text-sm text-gray-500 font-mono tracking-tight">{item.phone}</p>
-                                                    </div>
-                                                    <div className="hidden lg:flex items-start gap-2.5 flex-1 bg-amber-50/50 border border-amber-100 rounded-xl p-3">
-                                                        <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                                                        <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                                                            <span className="font-bold">Bağlam:</span> {item.reason}
+                                        calls.map((call) => (
+                                            <div key={call.id}
+                                                onClick={() => setSelectedCall(call)}
+                                                className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-2xl hover:border-gray-200 transition-all shadow-sm hover:shadow-md cursor-pointer group">
+                                                <CallTypeIcon type={call.type} status={call.status} />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-3 mb-1.5">
+                                                        <p className="text-base font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                                                            {call.phone && call.phone !== "–" ? call.phone : call.name}
                                                         </p>
+                                                        <TagBadge tag={call.tag} />
                                                     </div>
-                                                    <div className="flex flex-col items-end flex-shrink-0 min-w-[120px]">
-                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Planlanan Zaman</p>
-                                                        <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                                            <Circle className="w-2 h-2 fill-[#CCFF00] text-[#CCFF00]" />
-                                                            {item.scheduledFor.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                                                        </div>
-                                                    </div>
+                                                    <p className="text-sm text-gray-500 font-mono tracking-tight">
+                                                        {call.phone && call.phone !== "–"
+                                                            ? call.name
+                                                            : <span className="text-slate-300 italic text-xs">numara yükleniyor...</span>
+                                                        }
+                                                    </p>
                                                 </div>
-                                            ))
-                                        )
+                                                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                                                    {call.status === "missed" ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100">
+                                                            <Circle className="w-2 h-2 fill-current" /> Cevapsız
+                                                        </span>
+                                                    ) : call.type === "incoming" ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
+                                                            <Circle className="w-2 h-2 fill-current" /> Gelen
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#CCFF00]/10 text-lime-700 text-xs font-bold border border-[#CCFF00]/20">
+                                                            <Circle className="w-2 h-2 fill-current" /> Giden
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="hidden lg:flex items-start gap-2.5 max-w-[320px] bg-slate-50/80 border border-slate-100 rounded-xl p-3">
+                                                    <Sparkles className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                                                    <p className="text-xs text-slate-600 font-medium leading-relaxed line-clamp-2">{call.summary}</p>
+                                                </div>
+                                                <div className="hidden md:flex flex-col items-end flex-shrink-0 w-24">
+                                                    <p className="text-sm font-bold text-slate-900">{call.duration > 0 ? formatDuration(call.duration) : "–"}</p>
+                                                    <p className="text-xs text-slate-400 font-medium mt-1">{getTimeAgo(call.time)}</p>
+                                                </div>
+                                                <div className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <ChevronRight className="w-5 h-5 text-gray-300" />
+                                                </div>
+                                            </div>
+                                        ))
                                     )}
                                 </div>
                             </div>
@@ -549,7 +473,7 @@ export const DashboardPage = () => {
                         {/* Scrollable Content */}
                         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8 bg-gray-50/30 custom-scrollbar">
 
-                                {/* Audio Player Card */}
+                            {/* Audio Player Card */}
                             <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white shadow-xl relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-transform group-hover:scale-110 duration-700"></div>
                                 <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
@@ -633,25 +557,17 @@ export const DashboardPage = () => {
                 </div>
             )}
 
-            {/* ── NEW CALL MODAL (LIVE TEST) ── */}
+            {/* ── LIVE TEST MODAL ── */}
             {isNewCallModalOpen && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <LiveTestModal onClose={() => setIsNewCallModalOpen(false)} />
-                </div>
-            )}
-
-
-            {/* ── DIRECT OUTBOUND CALL MODAL ── */}
-            {isDirectCallModalOpen && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <DirectCallModal onClose={() => setIsDirectCallModalOpen(false)} />
                 </div>
             )}
         </>
     );
 };
 
-// ── LIVE TEST MODAL COMPONENT (ELEVENLABS SDK REWRITE) ──
+// ── LIVE TEST MODAL COMPONENT (ELEVENLABS SDK) ──
 import { startElevenLabsConversation } from "@/utils/elevenlabs";
 import { BarVisualizer } from "@/components/ui/bar-visualizer";
 
@@ -675,7 +591,7 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
         } else {
             try {
                 setStatus("connecting");
-                setMessages([]); // Clear history
+                setMessages([]);
                 const conv = await startElevenLabsConversation({
                     onConnect: () => {
                         setIsCalling(true);
@@ -705,7 +621,7 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                     }
                 });
                 conversationRef.current = conv;
-            } catch (error) {
+            } catch {
                 setStatus("ready");
             }
         }
@@ -715,14 +631,12 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
     useEffect(() => {
         return () => {
             if (conversationRef.current) {
-                try {
-                    conversationRef.current.endSession();
-                } catch(e) {}
+                try { conversationRef.current.endSession(); } catch { /* ignore */ }
             }
         };
     }, []);
 
-    // Scroll to bottom when messages change
+    // Auto-scroll transcript
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -731,21 +645,19 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
 
     return (
         <div className="bg-[#0B0F19] rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] relative w-full max-w-5xl mx-4 flex flex-col md:flex-row border border-white/10 ring-1 ring-[#CCFF00]/10 overflow-hidden h-[80vh] md:h-[600px] animate-in zoom-in-95 duration-300">
-            
+
             <button onClick={() => {
                 if (conversationRef.current) conversationRef.current.endSession();
                 onClose();
             }} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-all bg-white/5 hover:bg-white/10 hover:scale-105 p-2 rounded-full z-50">
-                 <X className="w-5 h-5"/>
+                <X className="w-5 h-5" />
             </button>
 
-            {/* ── LEFT SIDE: ORB & CONTROLS ── */}
+            {/* ── LEFT: ORB & CONTROLS ── */}
             <div className="flex-1 relative flex flex-col items-center justify-center p-8 bg-gradient-to-br from-[#0B0F19] to-slate-900 border-b md:border-b-0 md:border-r border-white/5 overflow-hidden">
-                {/* Minimal Background Glow */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#CCFF00]/5 rounded-full blur-[100px] pointer-events-none" />
 
                 <div className="z-10 flex flex-col items-center w-full">
-                    {/* Focus Area: Bar Visualizer */}
                     <div className="relative mb-12 flex flex-col items-center justify-center min-h-[192px] w-full">
                         {status === "ready" || status === "ended" ? (
                             <button
@@ -756,7 +668,7 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                             </button>
                         ) : (
                             <div className="flex flex-col items-center justify-center w-full cursor-pointer" onClick={toggleCall}>
-                                <BarVisualizer 
+                                <BarVisualizer
                                     state={status === "connecting" ? "connecting" : isAiSpeaking ? "speaking" : "listening"}
                                     barCount={28}
                                     minHeight={15}
@@ -770,15 +682,15 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                     <div className="text-center">
                         <h3 className="text-2xl font-bold text-white tracking-tight mb-2">LUERA Sesli Asistan</h3>
                         <p className="text-sm text-slate-400 font-medium">
-                            {status === "ready" ? "Görüşmeyi başlatmak için dokunun" : 
-                             status === "connecting" ? "Bağlantı kuruluyor..." : 
+                            {status === "ready" ? "Görüşmeyi başlatmak için dokunun" :
+                             status === "connecting" ? "Bağlantı kuruluyor..." :
                              status === "talking" ? (isAiSpeaking ? "Size yanıt veriyor..." : "Sizi dinliyor, konuşabilirsiniz...") : "Görüşme sonlandırıldı."}
                         </p>
                     </div>
 
                     {isCalling && (
                         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                            <button 
+                            <button
                                 onClick={toggleCall}
                                 className="w-16 h-16 rounded-full flex items-center justify-center text-white bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)] transition-all"
                             >
@@ -789,10 +701,8 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                 </div>
             </div>
 
-            {/* ── RIGHT SIDE: TRANSCRIPT ── */}
+            {/* ── RIGHT: TRANSCRIPT ── */}
             <div className="flex-[1.2] flex flex-col bg-[#0B0F19] relative max-h-[50vh] md:max-h-full">
-                
-                {/* Header */}
                 <div className="px-6 py-5 border-b border-white/5 flex items-center gap-3 bg-slate-900/20 shrink-0">
                     <div className="w-8 h-8 rounded-lg bg-[#CCFF00]/10 flex items-center justify-center text-[#CCFF00]">
                         <MessageSquare className="w-4 h-4" />
@@ -802,8 +712,7 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Gerçek Zamanlı Döküm</p>
                     </div>
                 </div>
-                
-                {/* Messages */}
+
                 <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar scroll-smooth">
                     {messages.length === 0 && status !== "talking" && (
                         <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
@@ -813,18 +722,16 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                             </p>
                         </div>
                     )}
-                    
+
                     {messages.map((msg) => {
                         const isAI = msg.speaker === "ai";
                         if (isAI) {
                             return (
                                 <div key={msg.id} className="flex w-full items-start gap-4 animate-in fade-in slide-in-from-bottom-2">
-                                    {/* Miniature Orb Avatar for AI */}
                                     <div className="w-9 h-9 shrink-0 rounded-full border border-white/10 bg-slate-900 flex items-center justify-center overflow-hidden relative shadow-[0_0_15px_rgba(204,255,0,0.1)] mt-1">
                                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#CCFF00]/40 via-lime-500/10 to-transparent animate-spin-slow mix-blend-screen" />
                                         <Bot className="w-4 h-4 text-[#CCFF00]/80 relative z-10" />
                                     </div>
-                                    {/* Clean Text Response (No Bubble) */}
                                     <div className="text-slate-200 text-[15px] leading-relaxed pt-2 w-full font-medium">
                                         {msg.text}
                                     </div>
@@ -833,7 +740,6 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                         } else {
                             return (
                                 <div key={msg.id} className="flex w-full justify-end animate-in fade-in slide-in-from-bottom-2">
-                                    {/* Minimalist User Input Bubble */}
                                     <div className="bg-slate-800 text-slate-100 px-5 py-3 rounded-2xl rounded-tr-sm max-w-[85%] text-[15px] shadow-sm border border-white/5 leading-relaxed">
                                         {msg.text}
                                     </div>
@@ -842,10 +748,8 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                         }
                     })}
                 </div>
-
             </div>
-            
+
         </div>
     );
 };
-
