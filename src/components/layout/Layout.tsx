@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
-    LayoutDashboard, Radio, PhoneCall, ListChecks,
+    LayoutDashboard, Radio, ListChecks,
     CalendarDays, MessageSquare, Settings, ChevronLeft,
     ChevronRight, Menu, Bell, X, BrainCircuit
 } from "lucide-react";
@@ -11,7 +11,6 @@ const navItems = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
     { to: "/agents", icon: BrainCircuit, label: "AI Asistanlar" },
     { to: "/campaigns", icon: Radio, label: "Kampanyalar" },
-    { to: "/live", icon: PhoneCall, label: "Canlı Çağrılar" },
     { to: "/results", icon: ListChecks, label: "Sonuçlar" },
     { to: "/calendar", icon: CalendarDays, label: "Takvim" },
     { to: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
@@ -186,7 +185,7 @@ export const Layout = () => {
             <main className={cn(
                 "transition-all duration-300",
                 collapsed ? "md:ml-20" : "md:ml-64",
-                location.pathname === "/live" ? "p-0 h-screen" : "p-4 md:p-6"
+                "p-4 md:p-6"
             )}>
                 <Outlet />
             </main>
