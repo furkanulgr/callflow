@@ -1,15 +1,15 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
     Phone, PhoneMissed, ArrowDownLeft, ArrowUpRight,
-    Mic, MicOff, Headphones, Sparkles, Target,
-    BarChart3, TrendingUp, ChevronRight, Circle,
-    Radio, CheckCircle2, CalendarCheck, Users,
-    Zap, Coffee, Lightbulb, Clock, Shield,
+    Mic, Sparkles, TrendingUp, ChevronRight, Circle,
+    Radio, CheckCircle2, CalendarCheck,
+    Zap, Lightbulb, Clock,
     X, Play, Pause, Volume2, MessageSquare, Bot, User,
     Flame, Snowflake, RefreshCw, Power, PhoneOff, Loader2
 } from "lucide-react";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
 import { getConversations, getConversationDetails, getConversationAudio } from "@/services/elevenlabsApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ───── TYPES ───── */
 type CallTag = "hot" | "warm" | "cold";
@@ -245,18 +245,33 @@ export const DashboardPage = () => {
         setIsNewCallModalOpen(false);
     };
 
+    const { user } = useAuth();
+    const firstName = user?.user_metadata?.full_name?.split(" ")[0]
+        || user?.email?.split("@")[0]
+        || "";
+
+    const stats = useMemo(() => {
+        const total = calls.length;
+        const answered = calls.filter(c => c.status === "answered" && c.duration > 0).length;
+        const missed = calls.filter(c => c.status === "missed").length;
+        const totalDuration = calls.reduce((a, c) => a + (c.duration || 0), 0);
+        const avgDuration = answered > 0 ? Math.round(totalDuration / answered) : 0;
+        const answerRate = total > 0 ? Math.round((answered / total) * 100) : 0;
+        return { total, answered, missed, avgDuration, answerRate };
+    }, [calls]);
+
     const hour = new Date().getHours();
     const greeting = hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
     return (
         <>
             <div className="p-4 md:p-6">
 
-                {/* ── STATS BAR (Static AI Dashboard Blocks) ── */}
+                {/* ── STATS BAR ── */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
                     {/* Card 1: Greeting */}
                     <div className="bg-white rounded-2xl border border-gray-100/80 p-4 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50/80 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50/80 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150" />
                         <div className="flex justify-between items-start mb-3 relative z-10">
                             <p className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">LUERA AI</p>
                             <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 shadow-sm transition-all duration-500 group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-100 group-hover:shadow-md">
@@ -265,41 +280,45 @@ export const DashboardPage = () => {
                         </div>
                         <div className="relative z-10">
                             <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-0.5">
-                                {greeting}, Gökhan
+                                {greeting}{firstName ? `, ${firstName}` : ""}
                             </h3>
                             <p className="text-sm font-medium text-gray-500">Otonom ajanınız göreve hazır.</p>
                         </div>
                     </div>
 
-                    {/* Card 2: System Status */}
-                    <div 
-                        onClick={() => setIsAnalyticsOpen(true)}
-                        className="bg-white rounded-2xl border border-gray-100/80 p-4 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[140px] cursor-pointer group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(16,185,129,0.15)] hover:border-emerald-100 hover:-translate-y-1"
-                    >
-                        <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-50/60 rounded-full blur-2xl -ml-16 -mt-16 transition-transform duration-700 group-hover:scale-150 group-hover:bg-emerald-100/50"></div>
+                    {/* Card 2: Toplam Arama */}
+                    <div className="bg-white rounded-2xl border border-gray-100/80 p-4 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(16,185,129,0.15)] hover:border-emerald-100 hover:-translate-y-1">
+                        <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-50/60 rounded-full blur-2xl -ml-16 -mt-16 transition-transform duration-700 group-hover:scale-150" />
                         <div className="flex justify-between items-start mb-3 relative z-10">
                             <div className="flex items-center gap-2 mt-1">
                                 <div className="relative flex items-center justify-center">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                    <div className="absolute w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75"></div>
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    <div className="absolute w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
                                 </div>
                                 <p className="text-[10px] font-black text-emerald-600 tracking-[0.2em] uppercase">SİSTEM CANLI</p>
                             </div>
                             <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-emerald-600 shadow-sm transition-transform duration-500 group-hover:rotate-[15deg] group-hover:scale-110">
-                                <Radio className="w-5 h-5" />
+                                <Phone className="w-5 h-5" />
                             </div>
                         </div>
                         <div className="relative z-10">
-                            <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-0.5 group-hover:text-emerald-700 transition-colors">Arama Analizi</h3>
-                            <p className="text-sm font-medium text-gray-500 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">Kayıtlar & Transkriptler <ChevronRight className="w-3.5 h-3.5" /></p>
+                            {isLoadingCalls ? (
+                                <div className="h-7 w-16 bg-gray-100 rounded-lg animate-pulse mb-1" />
+                            ) : (
+                                <h3 className="text-3xl font-black tracking-tight text-gray-900 mb-0.5">{stats.total}</h3>
+                            )}
+                            <p className="text-sm font-medium text-gray-500 flex items-center gap-1">
+                                Toplam Arama
+                                <span className="ml-1 text-red-500 font-bold text-xs">{stats.missed > 0 ? `· ${stats.missed} cevapsız` : ""}</span>
+                            </p>
                         </div>
                     </div>
 
-                    {/* Card 3: Demo Actions */}
+                    {/* Card 3: Hızlı Aksiyon */}
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(204,255,0,0.2)] hover:-translate-y-1 hover:border-slate-700">
-                        <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-10 -mb-10 transition-transform duration-1000 group-hover:scale-[1.8] group-hover:bg-[#CCFF00]/15 pointer-events-none"></div>
+                        <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-10 -mb-10 transition-transform duration-1000 group-hover:scale-[1.8] group-hover:bg-[#CCFF00]/15 pointer-events-none" />
                         <div className="flex justify-between items-start mb-3 relative z-10">
-                            <p className="text-[10px] font-black text-[#CCFF00] tracking-[0.2em] uppercase mt-1 flex items-center gap-1.5 shadow-[#CCFF00]">
+                            <p className="text-[10px] font-black text-[#CCFF00] tracking-[0.2em] uppercase mt-1 flex items-center gap-1.5">
                                 <Zap className="w-3.5 h-3.5 fill-[#CCFF00]" /> HIZLI AKSİYON
                             </p>
                             <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shadow-inner transition-colors duration-500 group-hover:text-white group-hover:bg-slate-700/50">
@@ -309,37 +328,38 @@ export const DashboardPage = () => {
                         <div className="relative z-10 flex gap-3 w-full mt-auto">
                             <button
                                 onClick={() => setIsNewCallModalOpen(true)}
-                                className="flex-1 bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 hover:border-white/20 rounded-xl py-3 px-3 flex items-center justify-center gap-2 transition-all text-white hover:text-[#CCFF00]"
+                                className="w-full bg-[#CCFF00] hover:bg-[#d4ff33] active:bg-[#bbf000] rounded-xl py-3 px-3 flex items-center justify-center gap-2 transition-all text-slate-900 shadow-[0_0_15px_rgba(204,255,0,0.3)] hover:shadow-[0_0_25px_rgba(204,255,0,0.5)]"
                             >
                                 <Mic className="w-4 h-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-wider">Planla</span>
-                            </button>
-                            
-                            <button
-                                onClick={handleQuickCall}
-                                disabled={isCallingNow}
-                                className="flex-[1.5] bg-[#CCFF00] hover:bg-[#d4ff33] active:bg-[#bbf000] rounded-xl py-3 px-3 flex items-center justify-center gap-2 transition-all text-slate-900 shadow-[0_0_15px_rgba(204,255,0,0.3)] hover:shadow-[0_0_25px_rgba(204,255,0,0.5)] disabled:opacity-50 disabled:cursor-wait"
-                            >
-                                <Phone className="w-4 h-4 fill-slate-900" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">
-                                    {isCallingNow ? "Aranıyor..." : "Hemen Ara"}
-                                </span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">Sesli Demo Başlat</span>
                             </button>
                         </div>
                     </div>
 
-                    {/* Card 4: Appointments */}
+                    {/* Card 4: Yanıtlanma Oranı */}
                     <div className="bg-white rounded-2xl border border-gray-100/80 p-4 shadow-[0_2px_20px_-8px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between min-h-[140px] group transition-all duration-500 hover:shadow-[0_8px_30px_-12px_rgba(59,130,246,0.15)] hover:border-blue-100 hover:-translate-y-1">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/60 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150 group-hover:bg-blue-100/50"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/60 rounded-full blur-2xl -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150" />
                         <div className="flex justify-between items-start mb-3 relative z-10">
-                            <p className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">GÜNLÜK HEDEF</p>
+                            <p className="text-[10px] font-black text-gray-400 tracking-[0.2em] uppercase mt-1">PERFORMANS</p>
                             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-blue-600 shadow-sm transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110">
-                                <Target className="w-5 h-5" />
+                                <TrendingUp className="w-5 h-5" />
                             </div>
                         </div>
                         <div className="relative z-10">
-                            <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-0.5 group-hover:text-blue-700 transition-colors">12 Randevu Toplandı</h3>
-                            <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5"><TrendingUp className="w-4 h-4 text-blue-500" /> <span className="text-blue-600 font-bold">%45</span> dönüşüm oranı</p>
+                            {isLoadingCalls ? (
+                                <div className="h-7 w-20 bg-gray-100 rounded-lg animate-pulse mb-1" />
+                            ) : (
+                                <h3 className="text-3xl font-black tracking-tight text-gray-900 mb-0.5 group-hover:text-blue-700 transition-colors">
+                                    %{stats.answerRate}
+                                </h3>
+                            )}
+                            <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-blue-500" />
+                                Yanıtlanma oranı
+                                {stats.avgDuration > 0 && (
+                                    <span className="text-blue-600 font-bold">· ort. {formatDuration(stats.avgDuration)}</span>
+                                )}
+                            </p>
                         </div>
                     </div>
 
