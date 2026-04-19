@@ -10,7 +10,7 @@ import Papa from "papaparse";
 import { cn } from "@/utils/cn";
 import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
 import { AgentPromptEditor } from "@/components/AgentPromptEditor";
-import { getPhoneNumbers, PhoneNumberItem, getAgents, AgentListItem, startBatchCalling, getConversations } from "@/services/elevenlabsApi";
+import { getPhoneNumbers, PhoneNumberItem, getAgents, AgentListItem, startBatchCalling, getConversations, getBatchCall, cancelBatchCall, aggregateBatchStats } from "@/services/elevenlabsApi";
 import { supabase } from "@/lib/supabase";
 
 type CampaignStatus = "active" | "paused" | "completed" | "draft";
@@ -29,6 +29,11 @@ type CampaignRow = {
     progress: number;
     agentId: string;
     agentRole: string;
+    batchId?: string | null;
+    failed?: number;
+    inProgress?: number;
+    batchStatus?: string;
+    lastBatchSync?: number;
 };
 
 function mapDbCampaign(row: any): CampaignRow {
@@ -48,6 +53,7 @@ function mapDbCampaign(row: any): CampaignRow {
         progress: total > 0 ? Math.round((called / total) * 100) : 0,
         agentId: row.agent_id || "",
         agentRole: "",
+        batchId: row.batch_id || null,
     };
 }
 
@@ -70,6 +76,49 @@ export const CampaignsPage = () => {
     const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
     const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(null);
     const [voiceDemoCampaign, setVoiceDemoCampaign] = useState<CampaignRow | null>(null);
+
+    // Live batch sync: poll ElevenLabs batch endpoint for any campaign with batchId
+    const syncBatch = async (batchId: string) => {
+        try {
+            const details = await getBatchCall(batchId);
+            const agg = aggregateBatchStats(details);
+            setCampaignList(prev => prev.map(c => {
+                if (c.batchId !== batchId) return c;
+                // If batch completed/cancelled, reflect on campaign status
+                let nextStatus = c.status;
+                if ((details.status || "").toLowerCase() === "completed") nextStatus = "completed";
+                else if ((details.status || "").toLowerCase() === "cancelled") nextStatus = "paused";
+                return {
+                    ...c,
+                    total: agg.total || c.total,
+                    called: agg.called,
+                    answered: agg.answered,
+                    failed: agg.failed,
+                    inProgress: agg.inProgress,
+                    progress: agg.progress,
+                    status: nextStatus,
+                    batchStatus: details.status,
+                    lastBatchSync: Date.now(),
+                };
+            }));
+        } catch {
+            /* ignore transient errors */
+        }
+    };
+
+    useEffect(() => {
+        // Initial + interval sync for all batchId campaigns
+        const activeBatches = campaignList
+            .filter(c => c.batchId && c.status === "active")
+            .map(c => c.batchId as string);
+        if (activeBatches.length === 0) return;
+        activeBatches.forEach(syncBatch);
+        const interval = setInterval(() => {
+            activeBatches.forEach(syncBatch);
+        }, 15000);
+        return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [campaignList.map(c => `${c.id}:${c.batchId}:${c.status}`).join("|")]);
 
     // Supabase'den kampanyaları çek, sonra ElevenLabs'ten gerçek istatistikleri güncelle
     useEffect(() => {
@@ -222,18 +271,26 @@ export const CampaignsPage = () => {
             if (dbError) throw new Error(dbError.message);
 
             // 2. "Aktif" ise ElevenLabs Batch Calling başlat
+            let batchId: string | null = null;
             if (mode === "active" && uploadedFile && selectedAgentId && selectedPhone) {
-                await startBatchCalling(
+                const batchResult = await startBatchCalling(
                     selectedAgentId,
                     selectedPhone,
                     uploadedFile,
                     newName
                 );
-                // Durumu batch_started olarak güncelle
+                batchId = batchResult.batch_id;
+                // Durumu ve batch_id'yi güncelle (batch_id kolonu yoksa sessizce devam)
                 await supabase
                     .from("campaigns")
-                    .update({ status: "active" })
-                    .eq("id", savedCampaign.id);
+                    .update({ status: "active", batch_id: batchId })
+                    .eq("id", savedCampaign.id)
+                    .then(async ({ error: upErr }) => {
+                        if (upErr) {
+                            // Fallback: sadece status güncelle
+                            await supabase.from("campaigns").update({ status: "active" }).eq("id", savedCampaign.id);
+                        }
+                    });
             }
 
             // 3. Local listeye ekle
@@ -252,6 +309,7 @@ export const CampaignsPage = () => {
                 progress: 0,
                 agentId: selectedAgentId || "",
                 agentRole: selectedAgent?.name || "Genel Asistan",
+                batchId,
             };
             setCampaignList(prev => [newCampaign, ...prev]);
             handleCloseModal();
@@ -352,10 +410,26 @@ export const CampaignsPage = () => {
                             <div key={c.id} className="bg-white rounded-3xl p-6 card">
                                 <div className="flex flex-col md:flex-row md:items-start gap-4">
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-3 mb-3">
+                                        <div className="flex items-center gap-3 mb-3 flex-wrap">
                                             <div className={cn("w-2 h-2 rounded-full", sc.dot)} />
                                             <h3 className="text-base font-bold text-gray-900 truncate">{c.name}</h3>
                                             <span className={sc.cls}>{sc.label}</span>
+                                            {c.batchId && c.status === "active" && (
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#CCFF00]/20 border border-[#CCFF00]/30 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_#10b981]" />
+                                                    Canlı
+                                                </span>
+                                            )}
+                                            {c.batchId && (
+                                                <span className="text-[9px] font-mono text-slate-400" title={`Batch ID: ${c.batchId}`}>
+                                                    #{c.batchId.slice(0, 8)}
+                                                </span>
+                                            )}
+                                            {typeof c.failed === "number" && c.failed > 0 && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-50 border border-red-100 text-[10px] font-bold text-red-600">
+                                                    <XCircle className="w-3 h-3" /> {c.failed} hata
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4">
                                             {[
@@ -386,9 +460,16 @@ export const CampaignsPage = () => {
                                     </div>
                                     <div className="flex flex-col gap-2 min-w-[130px] flex-shrink-0">
                                         {c.status === "active" && (
-                                            <button onClick={() => setCampaignList(prev => prev.map(camp => camp.id === c.id ? { ...camp, status: "paused" } : camp))}
+                                            <button onClick={async () => {
+                                                if (c.batchId) {
+                                                    if (!confirm("Canlı kampanya iptal edilecek. Emin misin?")) return;
+                                                    try { await cancelBatchCall(c.batchId); } catch {}
+                                                }
+                                                setCampaignList(prev => prev.map(camp => camp.id === c.id ? { ...camp, status: "paused" } : camp));
+                                                await supabase.from("campaigns").update({ status: "paused" }).eq("id", c.id);
+                                            }}
                                                 className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-orange-50 text-orange-600 text-xs font-bold border border-orange-200 hover:bg-orange-100 transition-all active:scale-[0.98]">
-                                                <Pause className="w-4 h-4" /> Durdur
+                                                <Pause className="w-4 h-4" /> {c.batchId ? "İptal Et" : "Durdur"}
                                             </button>
                                         )}
                                         {c.status === "paused" && (

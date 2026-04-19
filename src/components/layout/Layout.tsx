@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
     LayoutDashboard, Radio, ListChecks,
     CalendarDays, MessageSquare, Settings, ChevronLeft,
-    ChevronRight, Menu, Bell, X, BrainCircuit
+    ChevronRight, Menu, Bell, X, BrainCircuit, BarChart3,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -14,6 +14,7 @@ const navItems = [
     { to: "/results", icon: ListChecks, label: "Sonuçlar" },
     { to: "/calendar", icon: CalendarDays, label: "Takvim" },
     { to: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
+    { to: "/usage", icon: BarChart3, label: "Kullanım" },
 ];
 
 export const Layout = () => {

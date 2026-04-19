@@ -4,10 +4,13 @@ import {
     Mic, Sparkles, TrendingUp, ChevronRight, Circle,
     CheckCircle2, Zap, Clock,
     X, Play, Pause, Volume2, MessageSquare, Bot, User,
-    Flame, Snowflake, RefreshCw, Power, PhoneOff, Loader2
+    Flame, Snowflake, RefreshCw, Power, PhoneOff, Loader2,
+    PhoneCall, BarChart3,
 } from "lucide-react";
+import { QuickCallModal } from "@/components/QuickCallModal";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
-import { getConversations, getConversationDetails, getConversationAudio } from "@/services/elevenlabsApi";
+import { getConversations, getConversationDetails, getConversationAudio, getUserSubscription, UserSubscription, CHAR_RATE_TRY, CHARS_PER_MINUTE } from "@/services/elevenlabsApi";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 /* ───── TYPES ───── */
@@ -123,6 +126,12 @@ export const DashboardPage = () => {
     const [isLoadingCalls, setIsLoadingCalls] = useState(true);
     const [callsError, setCallsError] = useState<string | null>(null);
     const [isNewCallModalOpen, setIsNewCallModalOpen] = useState(false);
+    const [isQuickCallOpen, setIsQuickCallOpen] = useState(false);
+    const [subscription, setSubscription] = useState<UserSubscription | null>(null);
+
+    useEffect(() => {
+        getUserSubscription().then(setSubscription).catch(() => { /* optional */ });
+    }, []);
     const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -287,13 +296,22 @@ export const DashboardPage = () => {
                                 <Bot className="w-5 h-5" />
                             </div>
                         </div>
-                        <div className="relative z-10 flex gap-3 w-full mt-auto">
+                        <div className="relative z-10 grid grid-cols-2 gap-2 w-full mt-auto">
+                            <button
+                                onClick={() => setIsQuickCallOpen(true)}
+                                className="bg-[#CCFF00] hover:bg-[#d4ff33] active:bg-[#bbf000] rounded-xl py-3 px-2 flex items-center justify-center gap-1.5 transition-all text-slate-900 shadow-[0_0_15px_rgba(204,255,0,0.3)] hover:shadow-[0_0_25px_rgba(204,255,0,0.5)]"
+                                title="Tek numarayı hemen arat"
+                            >
+                                <PhoneCall className="w-4 h-4" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Hızlı Arama</span>
+                            </button>
                             <button
                                 onClick={() => setIsNewCallModalOpen(true)}
-                                className="w-full bg-[#CCFF00] hover:bg-[#d4ff33] active:bg-[#bbf000] rounded-xl py-3 px-3 flex items-center justify-center gap-2 transition-all text-slate-900 shadow-[0_0_15px_rgba(204,255,0,0.3)] hover:shadow-[0_0_25px_rgba(204,255,0,0.5)]"
+                                className="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 rounded-xl py-3 px-2 flex items-center justify-center gap-1.5 transition-all text-white"
+                                title="Tarayıcı üzerinden sesli demo"
                             >
                                 <Mic className="w-4 h-4" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Sesli Demo Başlat</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest">Sesli Demo</span>
                             </button>
                         </div>
                     </div>
@@ -326,6 +344,56 @@ export const DashboardPage = () => {
                     </div>
 
                 </div>
+
+                {/* ── USAGE STRIP ── */}
+                {subscription && (() => {
+                    const used = subscription.character_count || 0;
+                    const limit = subscription.character_limit || 0;
+                    const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                    const estTRY = used * CHAR_RATE_TRY;
+                    const estMin = Math.round(used / CHARS_PER_MINUTE);
+                    const barCls = pct >= 90 ? "bg-red-500" : pct >= 75 ? "bg-amber-500" : "bg-[#CCFF00]";
+                    return (
+                        <Link
+                            to="/usage"
+                            className="block bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md hover:border-[#CCFF00]/50 transition-all mb-6 group"
+                        >
+                            <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                <div className="flex items-center gap-3 min-w-[180px]">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shrink-0">
+                                        <BarChart3 className="w-5 h-5 text-[#CCFF00]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bu Dönem</p>
+                                        <p className="text-sm font-black text-slate-900">Kullanım & Tahmini Fatura</p>
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-1.5 text-xs font-bold">
+                                        <span className="text-slate-600">
+                                            {used.toLocaleString("tr-TR")} karakter · ≈ {estMin} dk
+                                        </span>
+                                        <span className="text-slate-900">%{pct}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className={cn("h-full rounded-full transition-all duration-700", barCls)} style={{ width: `${pct}%` }} />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4 md:border-l md:border-slate-100 md:pl-4">
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tahmini</p>
+                                        <p className="text-xl font-black text-emerald-600">
+                                            {estTRY.toLocaleString("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2 })}
+                                        </p>
+                                    </div>
+                                    <div className="text-xs font-black text-slate-400 group-hover:text-slate-900 transition-colors whitespace-nowrap">
+                                        Detay →
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                    );
+                })()}
 
                 {/* ── CALL LOG ── */}
                 <div className="grid grid-cols-1 gap-6">
@@ -470,44 +538,74 @@ export const DashboardPage = () => {
                             </button>
                         </div>
 
+                        {/* Audio Player — sticky, scroll dışında */}
+                        <div className="flex-shrink-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/5 relative overflow-hidden">
+                            {/* glow arka plan */}
+                            <div className="absolute inset-0 bg-[#CCFF00]/5 pointer-events-none" />
+                            <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-40 h-40 bg-[#CCFF00]/10 rounded-full blur-3xl pointer-events-none" />
+
+                            <div className="relative z-10 px-8 py-5 flex items-center gap-5">
+                                {/* İkon + label */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="w-8 h-8 rounded-xl bg-[#CCFF00]/15 flex items-center justify-center">
+                                        <Volume2 className="w-4 h-4 text-[#CCFF00]" />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:block">Ses Kaydı</span>
+                                </div>
+
+                                {audioUrl ? (
+                                    <>
+                                        <audio ref={audioRef} src={audioUrl} onEnded={() => setAudioPlaying(false)} className="hidden" />
+
+                                        {/* Play/Pause butonu */}
+                                        <button
+                                            onClick={toggleAudio}
+                                            className="w-11 h-11 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#CCFF00]/20"
+                                        >
+                                            {audioPlaying
+                                                ? <Pause className="w-4 h-4" />
+                                                : <Play className="w-4 h-4 ml-0.5" />}
+                                        </button>
+
+                                        {/* Waveform + süre */}
+                                        <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                            <div className="flex items-end gap-[2px] h-9 w-full overflow-hidden">
+                                                {Array.from({ length: 80 }).map((_, i) => {
+                                                    const h = 15 + Math.sin(i * 0.6) * 35 + Math.cos(i * 1.1) * 25 + 35;
+                                                    return (
+                                                        <div
+                                                            key={i}
+                                                            className="flex-1 rounded-full transition-all duration-500"
+                                                            style={{
+                                                                height: `${h}%`,
+                                                                minWidth: "2px",
+                                                                background: audioPlaying
+                                                                    ? `rgba(204,255,0,${0.4 + Math.sin(i * 0.4) * 0.35})`
+                                                                    : "rgba(255,255,255,0.15)",
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-mono font-bold text-slate-500">
+                                                <span>00:00</span>
+                                                <span>{formatDuration(selectedCall.duration)}</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : loadingDetail ? (
+                                    <div className="flex items-center gap-3 text-slate-400">
+                                        <Loader2 className="w-4 h-4 animate-spin text-[#CCFF00]" />
+                                        <span className="text-sm font-medium">Ses kaydı yükleniyor...</span>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-500 font-medium">Bu görüşme için ses kaydı mevcut değil.</p>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Scrollable Content */}
                         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8 bg-gray-50/30 custom-scrollbar">
-
-                            {/* Audio Player Card */}
-                            <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white shadow-xl relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-[#CCFF00]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-transform group-hover:scale-110 duration-700"></div>
-                                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2">
-                                    <Volume2 className="w-4 h-4 text-[#CCFF00]" /> Ses Kaydı
-                                </h3>
-                                <div className="flex items-center gap-6 relative z-10">
-                                    {audioUrl ? (
-                                        <>
-                                            <audio ref={audioRef} src={audioUrl} onEnded={() => setAudioPlaying(false)} className="hidden" />
-                                            <button onClick={toggleAudio} className="w-12 h-12 flex-shrink-0 rounded-full bg-[#CCFF00] text-slate-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-[#CCFF00]/20">
-                                                {audioPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
-                                            </button>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-1 h-12 w-full overflow-hidden px-1">
-                                                    {Array.from({ length: 90 }).map((_, i) => (
-                                                        <div key={i} className="flex-1 bg-white rounded-full transition-all duration-300" style={{ height: `${10 + Math.sin(i * 0.7) * 40 + Math.cos(i * 1.3) * 30 + 40}%`, opacity: audioPlaying ? 0.6 + Math.sin(i * 0.5) * 0.3 : 0.2, minWidth: "2px" }} />
-                                                    ))}
-                                                </div>
-                                                <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-3 font-mono">
-                                                    <span>00:00</span>
-                                                    <span>{formatDuration(selectedCall.duration)}</span>
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : loadingDetail ? (
-                                        <div className="flex items-center gap-3 text-slate-400">
-                                            <Loader2 className="w-5 h-5 animate-spin text-[#CCFF00]" />
-                                            <span className="text-sm font-medium">Ses kaydı yükleniyor...</span>
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-slate-500 font-medium">Bu görüşme için ses kaydı mevcut değil.</p>
-                                    )}
-                                </div>
-                            </div>
 
                             {/* Transcript Area */}
                             <div className="bg-white rounded-[1.5rem] border border-gray-200/60 p-6 shadow-sm">
@@ -563,6 +661,9 @@ export const DashboardPage = () => {
                     <LiveTestModal onClose={() => setIsNewCallModalOpen(false)} />
                 </div>
             )}
+
+            {/* ── QUICK OUTBOUND CALL MODAL ── */}
+            <QuickCallModal isOpen={isQuickCallOpen} onClose={() => setIsQuickCallOpen(false)} />
         </>
     );
 };

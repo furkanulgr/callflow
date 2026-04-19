@@ -12,6 +12,7 @@ import { CalendarPage } from "@/pages/CalendarPage";
 import { WhatsAppPage } from "@/pages/WhatsAppPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { LiveTestPage } from "@/pages/LiveTestPage";
+import { UsagePage } from "@/pages/UsagePage";
 
 const App = () => (
     <BrowserRouter>
@@ -31,6 +32,7 @@ const App = () => (
                         <Route path="results" element={<ResultsPage />} />
                         <Route path="calendar" element={<CalendarPage />} />
                         <Route path="whatsapp" element={<WhatsAppPage />} />
+                        <Route path="usage" element={<UsagePage />} />
                         <Route path="settings" element={<SettingsPage />} />
                     </Route>
                 </Route>

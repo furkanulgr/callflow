@@ -1,20 +1,115 @@
-import { useState, useEffect } from "react";
-import { getAgents, AgentListItem, LUNA_API_KEY, LUNA_AGENT_ID } from "@/services/elevenlabsApi";
-import { BrainCircuit, Loader2, Bot, Calendar, Headphones, Settings2, X, Activity, Zap, CheckCircle2 } from "lucide-react";
-import { cn } from "@/utils/cn";
+import { useState, useEffect, useMemo } from "react";
+import { getAgents, getConversations, deleteAgent, duplicateAgent, AgentListItem, LUNA_API_KEY, LUNA_AGENT_ID } from "@/services/elevenlabsApi";
+import { BrainCircuit, Loader2, Bot, Calendar, Headphones, Settings2, X, Activity, CheckCircle2, Phone, Clock, TrendingUp, Trash2, AlertTriangle, Copy } from "lucide-react";
+import { cn, formatDuration } from "@/utils/cn";
 import { AgentPromptEditor } from "@/components/AgentPromptEditor";
 import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
 import { CreateAgentModal } from "@/components/CreateAgentModal";
+
+interface AgentStats {
+    total: number;
+    answered: number;
+    missed: number;
+    answerRate: number;
+    avgDuration: number;
+    successCount: number;
+}
+
+const emptyStats: AgentStats = { total: 0, answered: 0, missed: 0, answerRate: 0, avgDuration: 0, successCount: 0 };
 
 export const AgentsPage = () => {
     const [agents, setAgents] = useState<AgentListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [conversations, setConversations] = useState<any[]>([]);
 
     // States for Modals
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [voiceDemoAgent, setVoiceDemoAgent] = useState<AgentListItem | null>(null);
     const [editingAgent, setEditingAgent] = useState<AgentListItem | null>(null);
+    const [deletingAgent, setDeletingAgent] = useState<AgentListItem | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    // Duplicate flow
+    const [duplicatingAgent, setDuplicatingAgent] = useState<AgentListItem | null>(null);
+    const [duplicateName, setDuplicateName] = useState("");
+    const [isDuplicating, setIsDuplicating] = useState(false);
+    const [duplicateError, setDuplicateError] = useState<string | null>(null);
+
+    const openDuplicate = (agent: AgentListItem) => {
+        setDuplicatingAgent(agent);
+        setDuplicateName(`${agent.name || "Asistan"} (Kopya)`);
+        setDuplicateError(null);
+    };
+
+    const handleConfirmDuplicate = async () => {
+        if (!duplicatingAgent || !duplicateName.trim()) return;
+        setIsDuplicating(true);
+        setDuplicateError(null);
+        try {
+            const apiKey = duplicatingAgent.agent_id === LUNA_AGENT_ID ? LUNA_API_KEY : undefined;
+            const newId = await duplicateAgent(duplicatingAgent.agent_id, duplicateName.trim(), apiKey);
+            // Optimistically prepend; real list will re-fetch
+            setAgents(prev => [
+                { agent_id: newId, name: duplicateName.trim(), created_at_unix_secs: Math.floor(Date.now() / 1000) } as AgentListItem,
+                ...prev,
+            ]);
+            setDuplicatingAgent(null);
+            setDuplicateName("");
+            // Re-fetch in background to sync with server metadata
+            fetchAgents();
+        } catch (err: any) {
+            setDuplicateError(err.message || "Kopyalama başarısız.");
+        } finally {
+            setIsDuplicating(false);
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletingAgent) return;
+        setIsDeleting(true);
+        setDeleteError(null);
+        try {
+            await deleteAgent(deletingAgent.agent_id);
+            setAgents(prev => prev.filter(a => a.agent_id !== deletingAgent.agent_id));
+            setDeletingAgent(null);
+        } catch (err: any) {
+            setDeleteError(err.message || "Asistan silinemedi.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Stats map: agent_id → AgentStats
+    const statsByAgent = useMemo(() => {
+        const map = new Map<string, AgentStats>();
+        conversations.forEach(conv => {
+            const aid = conv.agent_id || conv.agentId;
+            if (!aid) return;
+            const duration = conv.call_duration_secs ?? conv.duration_secs ?? 0;
+            const answered = duration > 0 && conv.status !== "failed" && conv.status !== "error";
+            const succeeded = conv.call_successful === "success";
+            const cur = map.get(aid) || { ...emptyStats };
+            cur.total += 1;
+            if (answered) cur.answered += 1;
+            else cur.missed += 1;
+            if (succeeded) cur.successCount += 1;
+            // accumulate total duration temporarily in avgDuration; finalize below
+            cur.avgDuration += duration;
+            map.set(aid, cur);
+        });
+        // Finalize derived values
+        map.forEach((s, key) => {
+            const totalDur = s.avgDuration;
+            s.avgDuration = s.answered > 0 ? Math.round(totalDur / s.answered) : 0;
+            s.answerRate = s.total > 0 ? Math.round((s.answered / s.total) * 100) : 0;
+            map.set(key, s);
+        });
+        return map;
+    }, [conversations]);
+
+    const getStats = (agentId: string): AgentStats => statsByAgent.get(agentId) || emptyStats;
 
     const fetchAgents = async () => {
         setIsLoading(true);
@@ -43,6 +138,12 @@ export const AgentsPage = () => {
         };
 
         initialFetch();
+
+        // Background: fetch all conversations for per-agent stats (non-blocking)
+        getConversations()
+            .then(data => { if (isMounted) setConversations(data); })
+            .catch(() => { /* stats optional */ });
+
         return () => { isMounted = false; };
     }, []);
 
@@ -157,16 +258,29 @@ export const AgentsPage = () => {
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2 mb-2">
-                                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
-                                        <Calendar className="w-4 h-4 text-slate-500" />
-                                        <span className="truncate">Sistem Başı</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[11px] text-[#CCFF00] font-medium bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
-                                        <Zap className="w-4 h-4 text-[#CCFF00]" />
-                                        <span className="truncate">~12ms Gecikme</span>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    const s = getStats(LUNA_AGENT_ID);
+                                    return (
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
+                                                <Phone className="w-4 h-4 text-[#CCFF00]" />
+                                                <span className="truncate">{s.total} Arama</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
+                                                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                                                <span className="truncate">%{s.answerRate} Yanıt</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
+                                                <Clock className="w-4 h-4 text-sky-400" />
+                                                <span className="truncate">{formatDuration(s.avgDuration)} ort.</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
+                                                <CheckCircle2 className="w-4 h-4 text-[#CCFF00]" />
+                                                <span className="truncate">{s.successCount} Başarı</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             <div className="flex flex-col gap-3 w-full mt-auto relative z-10">
@@ -189,6 +303,24 @@ export const AgentsPage = () => {
                         {/* Diğer Ajanlar (Beyaz Kartlar) */}
                         {agents.map((agent) => (
                             <div key={agent.agent_id} className="group bg-white/80 backdrop-blur-2xl rounded-[2rem] p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:border-[#CCFF00]/40 hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-start relative overflow-hidden">
+                                <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); openDuplicate(agent); }}
+                                        title="Kopyala"
+                                        className="p-2 rounded-xl bg-white/80 border border-slate-200 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm"
+                                    >
+                                        <Copy className="w-4 h-4" />
+                                    </button>
+                                    {agent.agent_id !== LUNA_AGENT_ID && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setDeletingAgent(agent); }}
+                                            title="Asistanı Sil"
+                                            className="p-2 rounded-xl bg-white/80 border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all shadow-sm"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Card Glass Shimmer Effect */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -226,17 +358,30 @@ export const AgentsPage = () => {
                                         </p>
                                     </div>
 
-                                    {/* High Tech Metrics Dashboard Faux */}
-                                    <div className="grid grid-cols-2 gap-2 mb-2">
-                                        <div className="flex items-center gap-2 text-[11px] text-slate-600 font-medium bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
-                                            <Calendar className="w-4 h-4 text-slate-400" />
-                                            <span className="truncate">{formatDate(agent.created_at_unix_secs)}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[11px] text-slate-600 font-medium bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
-                                            <Zap className="w-4 h-4 text-emerald-500" />
-                                            <span className="truncate">~32ms Gecikme</span>
-                                        </div>
-                                    </div>
+                                    {/* Real Metrics */}
+                                    {(() => {
+                                        const s = getStats(agent.agent_id);
+                                        return (
+                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
+                                                    <Phone className="w-4 h-4 text-emerald-500" />
+                                                    <span className="truncate">{s.total} Arama</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
+                                                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                                                    <span className="truncate">%{s.answerRate} Yanıt</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
+                                                    <Clock className="w-4 h-4 text-sky-500" />
+                                                    <span className="truncate">{formatDuration(s.avgDuration)} ort.</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
+                                                    <Calendar className="w-4 h-4 text-slate-400" />
+                                                    <span className="truncate">{formatDate(agent.created_at_unix_secs)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 <div className="flex flex-col gap-3 w-full mt-auto relative z-10">
@@ -300,6 +445,121 @@ export const AgentsPage = () => {
                                     apiKey={editingAgent.agent_id === LUNA_AGENT_ID ? LUNA_API_KEY : undefined}
                                 />
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Duplicate Agent Modal */}
+            {duplicatingAgent && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-[#CCFF00]" />
+                        <div className="px-8 pt-8 pb-6">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-inner">
+                                    <Copy className="w-6 h-6 text-indigo-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Asistanı Kopyala</h3>
+                                    <p className="text-xs font-medium text-slate-500 mt-0.5">
+                                        <span className="font-bold text-slate-700">{duplicatingAgent.name || "İsimsiz"}</span> şablon olarak kullanılacak
+                                    </p>
+                                </div>
+                            </div>
+                            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Yeni Asistan Adı</label>
+                            <input
+                                type="text"
+                                value={duplicateName}
+                                onChange={e => setDuplicateName(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter" && duplicateName.trim() && !isDuplicating) handleConfirmDuplicate(); }}
+                                autoFocus
+                                disabled={isDuplicating}
+                                placeholder="Örn: Zeynep (Satış)"
+                                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-800 focus:border-[#CCFF00] focus:ring-2 focus:ring-[#CCFF00]/20 outline-none"
+                            />
+                            <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                                Prompt, ses, analiz kriterleri ve bilgi bankası bağlantıları kopyalanır. Geçmiş aramalar kopyalanmaz.
+                            </p>
+                            {duplicateError && (
+                                <div className="mt-4 text-xs text-red-600 font-semibold bg-red-50 p-3 rounded-xl border border-red-100 flex items-start gap-2">
+                                    <X className="w-4 h-4 shrink-0 mt-0.5" /> {duplicateError}
+                                </div>
+                            )}
+                        </div>
+                        <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => { setDuplicatingAgent(null); setDuplicateError(null); }}
+                                disabled={isDuplicating}
+                                className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                            >
+                                Vazgeç
+                            </button>
+                            <button
+                                onClick={handleConfirmDuplicate}
+                                disabled={isDuplicating || !duplicateName.trim()}
+                                className={cn(
+                                    "flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all shadow-[0_8px_20px_rgba(79,70,229,0.2)]",
+                                    isDuplicating || !duplicateName.trim()
+                                        ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                                        : "bg-slate-900 text-[#CCFF00] hover:bg-slate-800 active:scale-95"
+                                )}
+                            >
+                                {isDuplicating ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin" /> Kopyalanıyor...</>
+                                ) : (
+                                    <><Copy className="w-4 h-4" /> Kopyala</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deletingAgent && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-400" />
+                        <div className="px-8 pt-8 pb-6 flex flex-col items-center text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center mb-4 shadow-inner">
+                                <AlertTriangle className="w-8 h-8 text-red-500" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2">Asistanı Sil</h3>
+                            <p className="text-sm font-medium text-slate-500 leading-relaxed">
+                                <span className="font-black text-slate-900">{deletingAgent.name || "İsimsiz Asistan"}</span> isimli asistan kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                            </p>
+                            <p className="text-[11px] font-mono text-slate-400 mt-2 break-all">
+                                {deletingAgent.agent_id}
+                            </p>
+                            {deleteError && (
+                                <div className="mt-4 w-full text-xs text-red-600 font-semibold bg-red-50 p-3 rounded-xl border border-red-100 flex items-start gap-2 text-left">
+                                    <X className="w-4 h-4 shrink-0 mt-0.5" /> {deleteError}
+                                </div>
+                            )}
+                        </div>
+                        <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => { setDeletingAgent(null); setDeleteError(null); }}
+                                disabled={isDeleting}
+                                className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                            >
+                                Vazgeç
+                            </button>
+                            <button
+                                onClick={handleConfirmDelete}
+                                disabled={isDeleting}
+                                className={cn(
+                                    "flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm text-white transition-all shadow-[0_8px_20px_rgba(220,38,38,0.25)]",
+                                    isDeleting ? "bg-red-300 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 active:scale-95"
+                                )}
+                            >
+                                {isDeleting ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin" /> Siliniyor...</>
+                                ) : (
+                                    <><Trash2 className="w-4 h-4" /> Evet, Sil</>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
