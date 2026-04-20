@@ -4,28 +4,28 @@ import {
     LayoutDashboard, Radio, ListChecks,
     CalendarDays, MessageSquare, Settings, ChevronLeft,
     ChevronRight, Menu, Bell, X, BrainCircuit, BarChart3,
+    ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
+/* ── Nav items ────────────────────────────────────────────── */
 const navItems = [
-    { to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
-    { to: "/agents", icon: BrainCircuit, label: "AI Asistanlar" },
-    { to: "/campaigns", icon: Radio, label: "Kampanyalar" },
-    { to: "/results", icon: ListChecks, label: "Sonuçlar" },
-    { to: "/calendar", icon: CalendarDays, label: "Takvim" },
-    { to: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
-    { to: "/usage", icon: BarChart3, label: "Kullanım" },
+    { to: "/",          icon: LayoutDashboard, label: "Dashboard",     end: true },
+    { to: "/agents",    icon: BrainCircuit,    label: "AI Asistanlar"  },
+    { to: "/campaigns", icon: Radio,           label: "Kampanyalar"    },
+    { to: "/results",   icon: ListChecks,      label: "Sonuçlar"       },
+    { to: "/calendar",  icon: CalendarDays,    label: "Takvim"         },
+    { to: "/whatsapp",  icon: MessageSquare,   label: "WhatsApp"       },
+    // { to: "/usage",     icon: BarChart3,       label: "Kullanım"       },
 ];
 
+/* ══════════════════════════════════════════════════════════════ */
 export const Layout = () => {
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed]   = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const location = useLocation();
 
-    // Close mobile menu on route change
-    useEffect(() => {
-        setMobileOpen(false);
-    }, [location.pathname]);
+    useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
     return (
         <div className="min-h-screen bg-background">
@@ -45,7 +45,7 @@ export const Layout = () => {
                     onClick={() => setMobileOpen(false)} />
             )}
 
-            {/* ── SIDEBAR (white/glass — same as LeadFlow) ── */}
+            {/* ── SIDEBAR ── */}
             <aside className={cn(
                 "fixed top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-gray-100 z-50 transition-all duration-300 ease-in-out",
                 "md:translate-x-0",
@@ -53,37 +53,33 @@ export const Layout = () => {
                 "md:left-0",
                 collapsed ? "md:w-20" : "md:w-64"
             )}>
-                {/* Logo Section */}
-                <div className="relative p-6 border-b border-gray-100 flex items-center justify-between">
-                    <div className={cn(
-                        "flex items-center gap-3 transition-all duration-300",
-                        collapsed && "md:justify-center"
-                    )}>
+                {/* ── Logo ── */}
+                <div className="relative p-5 border-b border-gray-100">
+                    <div className={cn("flex items-center justify-between", collapsed && "md:justify-center")}>
                         {(!collapsed || mobileOpen) && (
-                            <div className="flex items-baseline gap-1.5">
+                            <div className="flex items-baseline gap-2">
                                 <h1 className="text-2xl font-bold text-gray-900">LUERA</h1>
-                                <span className="text-xs text-gray-400 tracking-wide">CallFlow</span>
+                                <span className="text-sm font-medium text-gray-400">CallFlow</span>
                             </div>
                         )}
                         {collapsed && !mobileOpen && (
                             <span className="text-2xl font-bold text-gray-900">L</span>
                         )}
-                    </div>
 
-                    {/* Mobile Close */}
-                    <button onClick={() => setMobileOpen(false)} className="md:hidden p-1 rounded-lg hover:bg-gray-100 text-gray-500">
-                        <X size={20} />
-                    </button>
+                        {/* Mobile Close */}
+                        <button onClick={() => setMobileOpen(false)} className="md:hidden p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+                            <X size={20} />
+                        </button>
+                    </div>
 
                     {/* Desktop Collapse Toggle */}
                     <button
                         onClick={() => setCollapsed(!collapsed)}
                         className={cn(
-                            "absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full",
+                            "absolute -right-3 top-6 w-6 h-6 rounded-full",
                             "bg-white border border-gray-200 shadow-sm",
                             "hidden md:flex items-center justify-center",
-                            "hover:bg-gray-50 transition-colors",
-                            "text-gray-400 hover:text-gray-600"
+                            "hover:bg-gray-50 transition-colors text-gray-400 hover:text-gray-600"
                         )}
                     >
                         {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -95,23 +91,17 @@ export const Layout = () => {
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         return (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.end}
-                                className={({ isActive }) =>
-                                    cn(
-                                        "relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                                        collapsed && !mobileOpen ? "justify-center px-3" : "",
-                                        isActive
-                                            ? "bg-[#CCFF00]/10 text-gray-900 font-medium"
-                                            : "text-gray-500 hover:bg-gray-100/80 hover:text-gray-900"
-                                    )
-                                }
+                            <NavLink key={item.to} to={item.to} end={item.end}
+                                className={({ isActive }) => cn(
+                                    "relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                                    collapsed && !mobileOpen ? "justify-center px-3" : "",
+                                    isActive
+                                        ? "bg-[#CCFF00]/10 text-gray-900 font-medium"
+                                        : "text-gray-500 hover:bg-gray-100/80 hover:text-gray-900"
+                                )}
                             >
                                 {({ isActive }) => (
                                     <>
-                                        {/* Active Indicator */}
                                         {isActive && (
                                             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#CCFF00] rounded-r-full" />
                                         )}
@@ -125,23 +115,18 @@ export const Layout = () => {
 
                     {/* Divider + Settings */}
                     <div className="pt-4 mt-4 border-t border-gray-100">
-                        <NavLink
-                            to="/settings"
-                            className={({ isActive }) =>
-                                cn(
-                                    "relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                                    collapsed && !mobileOpen ? "justify-center px-3" : "",
-                                    isActive
-                                        ? "bg-[#CCFF00]/10 text-gray-900 font-medium"
-                                        : "text-gray-500 hover:bg-gray-100/80 hover:text-gray-900"
-                                )
-                            }
+                        <NavLink to="/settings"
+                            className={({ isActive }) => cn(
+                                "relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                                collapsed && !mobileOpen ? "justify-center px-3" : "",
+                                isActive
+                                    ? "bg-[#CCFF00]/10 text-gray-900 font-medium"
+                                    : "text-gray-500 hover:bg-gray-100/80 hover:text-gray-900"
+                            )}
                         >
                             {({ isActive }) => (
                                 <>
-                                    {isActive && (
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#CCFF00] rounded-r-full" />
-                                    )}
+                                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#CCFF00] rounded-r-full" />}
                                     <Settings size={20} />
                                     {(!collapsed || mobileOpen) && <span>Ayarlar</span>}
                                 </>
@@ -152,15 +137,28 @@ export const Layout = () => {
 
                 {/* User Profile */}
                 <div className="absolute bottom-0 w-full p-4 border-t border-gray-100 bg-white/50">
-                    {/* Notification */}
-                    {(!collapsed || mobileOpen) && (
-                        <div className="flex justify-end mb-3">
-                            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
-                                <Bell size={18} />
-                                <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#CCFF00] border-2 border-white" />
-                            </button>
+
+                    {/* LeadFlow Button */}
+                    <a
+                        href="http://localhost:5174"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                            "flex items-center gap-2 mb-3 px-2 py-1.5 rounded-xl",
+                            "hover:bg-gray-100 transition-all duration-200 group",
+                            collapsed && !mobileOpen ? "justify-center" : ""
+                        )}
+                    >
+                        <div className={cn("flex items-baseline gap-2 flex-1", collapsed && !mobileOpen && "flex-none")}>
+                            <span className="text-2xl font-bold text-gray-900">LUERA</span>
+                            {(!collapsed || mobileOpen) && (
+                                <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600 transition-colors">LeadFlow</span>
+                            )}
                         </div>
-                    )}
+                        {(!collapsed || mobileOpen) && (
+                            <ArrowUpRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
+                        )}
+                    </a>
 
                     <div className={cn(
                         "flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer",
@@ -170,13 +168,19 @@ export const Layout = () => {
                             <span className="font-bold text-gray-900 text-sm">G</span>
                         </div>
                         {(!collapsed || mobileOpen) && (
-                            <div className="flex-1 text-left">
-                                <p className="text-sm font-semibold text-gray-900">Gökhan</p>
-                                <p className="text-xs text-gray-500 flex items-center gap-1">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                    Premium
-                                </p>
-                            </div>
+                            <>
+                                <div className="flex-1 text-left">
+                                    <p className="text-sm font-semibold text-gray-900">Gökhan</p>
+                                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        Premium
+                                    </p>
+                                </div>
+                                <button className="relative p-2 rounded-lg hover:bg-gray-200 transition-colors text-gray-500 flex-shrink-0">
+                                    <Bell size={16} />
+                                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#CCFF00] border-2 border-white" />
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>

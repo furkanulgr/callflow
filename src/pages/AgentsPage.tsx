@@ -156,10 +156,6 @@ export const AgentsPage = () => {
     return (
         <div className="w-full h-full min-h-screen relative overflow-hidden flex flex-col p-4 md:p-8 pb-32 bg-[#F8FAFC]">
 
-            {/* Ambient Background Glows */}
-            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-emerald-400/10 blur-[140px] pointer-events-none" />
-            <div className="absolute top-[20%] right-[-5%] w-[30%] h-[30%] rounded-full bg-indigo-500/5 blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-[-10%] right-[10%] w-[40%] h-[40%] rounded-full bg-[#CCFF00]/10 blur-[140px] pointer-events-none" />
 
             <div className="relative z-10 max-w-[1600px] w-full mx-auto">
                 {/* Strategic Dashboard Header */}
@@ -222,183 +218,145 @@ export const AgentsPage = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in slide-in-from-bottom-8 duration-700 fade-in delay-100 fill-mode-backwards">
-                        
-                        {/* LUNA ANA ASİSTAN KARTI (Dark Mode) */}
-                        <div className="group bg-slate-950 rounded-[2rem] p-6 border border-[#CCFF00]/20 shadow-[0_8px_30px_rgba(204,255,0,0.05)] hover:shadow-[0_20px_40px_rgba(204,255,0,0.15)] hover:border-[#CCFF00]/50 hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-start relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#CCFF00]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                            <div className="absolute -right-12 -top-12 w-48 h-48 bg-gradient-to-br from-[#CCFF00]/10 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none blur-3xl scale-90 group-hover:scale-100" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 animate-in slide-in-from-bottom-8 duration-700 fade-in delay-100 fill-mode-backwards">
 
-                            {/* Status and Tech Info */}
-                            <div className="w-full flex justify-between items-start mb-6">
-                                <div className="relative">
-                                    <div className="w-16 h-16 rounded-[1.25rem] bg-slate-900 shadow-2xl flex items-center justify-center relative z-10 text-[#CCFF00] overflow-hidden group-hover:scale-105 transition-transform duration-500 ring-1 ring-[#CCFF00]/30">
-                                        <Bot className="w-8 h-8 drop-shadow-[0_0_12px_rgba(204,255,0,0.8)]" />
-                                    </div>
-                                    <div className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-[#CCFF00] rounded-full border-[3px] border-slate-950 z-20 shadow-[0_0_10px_#CCFF00]" />
-                                </div>
+                        {/* ── ANA ASİSTAN KARTI (Dark) ── */}
+                        <div className="group relative flex flex-col rounded-2xl overflow-hidden border border-[#CCFF00]/20 shadow-xl hover:shadow-[0_24px_48px_rgba(204,255,0,0.12)] hover:-translate-y-1 transition-all duration-300 bg-slate-950">
 
-                                <div className="flex flex-col items-end gap-1.5">
-                                    <span className="text-[9px] font-black tracking-[0.2em] uppercase bg-[#CCFF00]/10 text-[#CCFF00] px-3 py-1 rounded-full border border-[#CCFF00]/20 shadow-sm">
-                                        ANA ASİSTAN
-                                    </span>
-                                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 rounded-md border border-emerald-500/20 shadow-sm backdrop-blur-sm">
-                                        <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                                        <span className="text-[10px] font-bold text-emerald-400">Sistem Aktif</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="relative z-10 w-full mb-8">
-                                <h3 className="text-[22px] font-black text-white mb-2 tracking-tight line-clamp-1 group-hover:text-[#CCFF00] transition-colors duration-300">ZEYNEP (KONTROL)</h3>
-
-                                <div className="flex items-center justify-between w-full p-3 bg-slate-900/80 rounded-xl border border-slate-800 mb-4 group-hover:border-slate-700 transition-colors shadow-inner backdrop-blur-sm">
-                                    <p className="text-[11px] text-slate-400 font-medium font-mono truncate text-ellipsis" title="agent_6701knh148pgfyvvsbfjeg27ps3n">
-                                        Sistem ID: <span className="text-slate-200 font-bold ml-1">agent_6701kn...</span>
-                                    </p>
-                                </div>
-
-                                {(() => {
-                                    const s = getStats(LUNA_AGENT_ID);
-                                    return (
-                                        <div className="grid grid-cols-2 gap-2 mb-2">
-                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
-                                                <Phone className="w-4 h-4 text-[#CCFF00]" />
-                                                <span className="truncate">{s.total} Arama</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
-                                                <TrendingUp className="w-4 h-4 text-emerald-400" />
-                                                <span className="truncate">%{s.answerRate} Yanıt</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
-                                                <Clock className="w-4 h-4 text-sky-400" />
-                                                <span className="truncate">{formatDuration(s.avgDuration)} ort.</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[11px] text-slate-300 font-bold bg-slate-900 border border-slate-800 shadow-sm p-2.5 rounded-xl">
-                                                <CheckCircle2 className="w-4 h-4 text-[#CCFF00]" />
-                                                <span className="truncate">{s.successCount} Başarı</span>
-                                            </div>
+                            {/* Card Header */}
+                            <div className="relative px-5 pt-5 pb-4 border-b border-white/5">
+                                <div className="absolute inset-0 bg-gradient-to-br from-[#CCFF00]/8 to-transparent pointer-events-none" />
+                                <div className="flex items-center justify-between relative z-10">
+                                    {/* Avatar */}
+                                    <div className="relative">
+                                        <div className="w-12 h-12 rounded-xl bg-[#CCFF00]/10 border border-[#CCFF00]/20 flex items-center justify-center">
+                                            <Bot className="w-6 h-6 text-[#CCFF00]" />
                                         </div>
-                                    );
-                                })()}
+                                        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#CCFF00] border-2 border-slate-950 shadow-[0_0_8px_#CCFF00]" />
+                                    </div>
+                                    {/* Badge */}
+                                    <span className="text-[10px] font-bold tracking-widest uppercase text-[#CCFF00]/70 bg-[#CCFF00]/10 border border-[#CCFF00]/20 px-2.5 py-1 rounded-full">
+                                        Ana Asistan
+                                    </span>
+                                </div>
+                                <h3 className="text-lg font-black text-white mt-3 tracking-tight line-clamp-1 relative z-10">ZEYNEP</h3>
+                                <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate relative z-10">agent_6701kn...</p>
                             </div>
 
-                            <div className="flex flex-col gap-3 w-full mt-auto relative z-10">
+                            {/* Stats */}
+                            {(() => {
+                                const s = getStats(LUNA_AGENT_ID);
+                                return (
+                                    <div className="grid grid-cols-2 divide-x divide-y divide-white/5 border-b border-white/5">
+                                        {[
+                                            { icon: Phone,       value: `${s.total}`,              label: "Arama",   color: "text-[#CCFF00]" },
+                                            { icon: TrendingUp,  value: `%${s.answerRate}`,        label: "Yanıt",   color: "text-emerald-400" },
+                                            { icon: Clock,       value: formatDuration(s.avgDuration), label: "Ort. Süre", color: "text-sky-400" },
+                                            { icon: CheckCircle2,value: `${s.successCount}`,       label: "Başarı",  color: "text-[#CCFF00]" },
+                                        ].map(({ icon: Icon, value, label, color }) => (
+                                            <div key={label} className="flex flex-col gap-0.5 px-4 py-3">
+                                                <Icon className={cn("w-3.5 h-3.5 mb-1", color)} />
+                                                <span className="text-sm font-black text-white">{value}</span>
+                                                <span className="text-[10px] text-slate-500 font-medium">{label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Actions */}
+                            <div className="flex flex-col gap-2 p-4 mt-auto">
                                 <button
                                     onClick={() => setVoiceDemoAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
-                                    className="w-full relative group/btn flex justify-center items-center gap-2.5 py-4 bg-[#CCFF00] text-slate-950 rounded-2xl font-black text-sm tracking-wide overflow-hidden shadow-[0_8px_20px_rgba(204,255,0,0.15)] hover:shadow-[0_8px_30px_rgba(204,255,0,0.3)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]"
+                                    className="w-full flex items-center justify-center gap-2 py-3 bg-[#CCFF00] text-slate-900 rounded-xl font-black text-sm hover:brightness-110 hover:-translate-y-0.5 transition-all active:scale-[0.98] shadow-[0_4px_16px_rgba(204,255,0,0.25)]"
                                 >
-                                    <Headphones className="w-4.5 h-4.5" /> ZEYNEP'e Bağlan
+                                    <Headphones className="w-4 h-4" /> Bağlan
                                 </button>
-
                                 <button
                                     onClick={() => setEditingAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
-                                    className="w-full flex justify-center items-center gap-2.5 py-3.5 bg-slate-900 border border-slate-800 text-slate-400 rounded-2xl font-bold text-sm tracking-wide hover:border-slate-700 hover:text-white hover:bg-slate-800 hover:shadow-md transition-all active:scale-[0.98]"
+                                    className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 text-slate-400 rounded-xl font-bold text-sm hover:bg-white/10 hover:text-white transition-all active:scale-[0.98]"
                                 >
-                                    <Settings2 className="w-4 h-4" /> Nöral Bağları Yönet
+                                    <Settings2 className="w-4 h-4" /> Yapılandır
                                 </button>
                             </div>
                         </div>
-                        
-                        {/* Diğer Ajanlar (Beyaz Kartlar) */}
+
+                        {/* ── DİĞER AJAN KARTLARI ── */}
                         {agents.map((agent) => (
-                            <div key={agent.agent_id} className="group bg-white/80 backdrop-blur-2xl rounded-[2rem] p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:border-[#CCFF00]/40 hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-start relative overflow-hidden">
-                                <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); openDuplicate(agent); }}
-                                        title="Kopyala"
-                                        className="p-2 rounded-xl bg-white/80 border border-slate-200 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm"
-                                    >
-                                        <Copy className="w-4 h-4" />
-                                    </button>
-                                    {agent.agent_id !== LUNA_AGENT_ID && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setDeletingAgent(agent); }}
-                                            title="Asistanı Sil"
-                                            className="p-2 rounded-xl bg-white/80 border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all shadow-sm"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
+                            <div key={agent.agent_id} className="group relative flex flex-col rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 bg-white">
 
-                                {/* Card Glass Shimmer Effect */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                                <div className="absolute -right-12 -top-12 w-48 h-48 bg-gradient-to-br from-emerald-100/50 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none blur-3xl scale-90 group-hover:scale-100" />
-
-                                {/* Status and Tech Info */}
-                                <div className="w-full flex justify-between items-start mb-6">
-                                    <div className="relative">
-                                        <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-slate-900 to-slate-950 shadow-2xl flex items-center justify-center relative z-10 text-[#CCFF00] overflow-hidden group-hover:scale-105 transition-transform duration-500 ring-1 ring-white/10">
-                                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay" />
-                                            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50" />
-                                            <Bot className="w-8 h-8 drop-shadow-[0_0_12px_rgba(204,255,0,0.8)]" />
-                                        </div>
-                                        {/* Status Pulsating Dot removed */}
-                                        <div className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-emerald-500 rounded-full border-[3px] border-white z-20 shadow-md" />
-                                    </div>
-
-                                    <div className="flex flex-col items-end gap-1.5">
-                                        <span className="bg-slate-100/80 text-slate-500 text-[10px] font-black uppercase tracking-[0.1em] px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm backdrop-blur-sm">
-                                            LUERA CORE V2
-                                        </span>
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50/80 rounded-md border border-emerald-100/50 shadow-sm backdrop-blur-sm">
-                                            <Activity className="w-3.5 h-3.5 text-emerald-500" />
-                                            <span className="text-[10px] font-bold text-emerald-600">Sistem Aktif</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="relative z-10 w-full mb-8">
-                                    <h3 className="text-[22px] font-black text-slate-900 mb-2 tracking-tight line-clamp-1 group-hover:text-emerald-700 transition-colors duration-300">{agent.name || "İsimsiz Asistan"}</h3>
-
-                                    <div className="flex items-center justify-between w-full p-3 bg-slate-50/60 rounded-xl border border-slate-100 mb-4 group-hover:bg-white/80 transition-colors shadow-inner backdrop-blur-sm">
-                                        <p className="text-[11px] text-slate-500 font-medium font-mono truncate text-ellipsis" title={agent.agent_id}>
-                                            Sistem ID: <span className="text-slate-700 font-bold ml-1">{agent.agent_id}</span>
-                                        </p>
-                                    </div>
-
-                                    {/* Real Metrics */}
-                                    {(() => {
-                                        const s = getStats(agent.agent_id);
-                                        return (
-                                            <div className="grid grid-cols-2 gap-2 mb-2">
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
-                                                    <Phone className="w-4 h-4 text-emerald-500" />
-                                                    <span className="truncate">{s.total} Arama</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
-                                                    <TrendingUp className="w-4 h-4 text-emerald-500" />
-                                                    <span className="truncate">%{s.answerRate} Yanıt</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
-                                                    <Clock className="w-4 h-4 text-sky-500" />
-                                                    <span className="truncate">{formatDuration(s.avgDuration)} ort.</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold bg-white/60 border border-slate-100 shadow-sm p-2.5 rounded-xl">
-                                                    <Calendar className="w-4 h-4 text-slate-400" />
-                                                    <span className="truncate">{formatDate(agent.created_at_unix_secs)}</span>
-                                                </div>
+                                {/* Card Header */}
+                                <div className="relative px-5 pt-5 pb-4 border-b border-slate-100">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white pointer-events-none" />
+                                    <div className="flex items-center justify-between relative z-10">
+                                        {/* Avatar */}
+                                        <div className="relative">
+                                            <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center">
+                                                <Bot className="w-6 h-6 text-[#CCFF00]" />
                                             </div>
-                                        );
-                                    })()}
+                                            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
+                                        </div>
+                                        {/* Active badge */}
+                                        <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                                            <Activity className="w-3 h-3 text-emerald-500" />
+                                            <span className="text-[10px] font-bold text-emerald-600">Aktif</span>
+                                        </div>
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900 mt-3 tracking-tight line-clamp-1 relative z-10">{agent.name || "İsimsiz Asistan"}</h3>
+                                    <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate relative z-10" title={agent.agent_id}>{agent.agent_id.slice(0, 20)}...</p>
                                 </div>
 
-                                <div className="flex flex-col gap-3 w-full mt-auto relative z-10">
+                                {/* Stats */}
+                                {(() => {
+                                    const s = getStats(agent.agent_id);
+                                    return (
+                                        <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 border-b border-slate-100">
+                                            {[
+                                                { icon: Phone,       value: `${s.total}`,              label: "Arama",    color: "text-slate-700" },
+                                                { icon: TrendingUp,  value: `%${s.answerRate}`,        label: "Yanıt",    color: "text-emerald-600" },
+                                                { icon: Clock,       value: formatDuration(s.avgDuration), label: "Ort. Süre", color: "text-sky-600" },
+                                                { icon: Calendar,    value: formatDate(agent.created_at_unix_secs).split(" ").slice(0,2).join(" "), label: "Oluşturulma", color: "text-slate-500" },
+                                            ].map(({ icon: Icon, value, label, color }) => (
+                                                <div key={label} className="flex flex-col gap-0.5 px-4 py-3">
+                                                    <Icon className={cn("w-3.5 h-3.5 mb-1", color)} />
+                                                    <span className="text-sm font-black text-slate-800 truncate">{value}</span>
+                                                    <span className="text-[10px] text-slate-400 font-medium">{label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Actions */}
+                                <div className="flex flex-col gap-2 p-4 mt-auto">
                                     <button
                                         onClick={() => setVoiceDemoAgent(agent)}
-                                        className="w-full relative group/btn flex justify-center items-center gap-2.5 py-4 bg-slate-950 text-[#CCFF00] rounded-2xl font-bold text-sm tracking-wide overflow-hidden shadow-[0_8px_20px_rgba(15,23,42,0.15)] hover:shadow-[0_8px_30px_rgba(204,255,0,0.25)] hover:bg-slate-900 hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]"
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-[#CCFF00] rounded-xl font-black text-sm hover:bg-slate-800 hover:-translate-y-0.5 transition-all active:scale-[0.98] shadow-[0_4px_16px_rgba(15,23,42,0.12)]"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#CCFF00]/15 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite]" />
-                                        <Headphones className="w-4.5 h-4.5" /> Canlı Sesli Bağlantı
+                                        <Headphones className="w-4 h-4" /> Canlı Bağlantı
                                     </button>
-
-                                    <button
-                                        onClick={() => setEditingAgent(agent)}
-                                        className="w-full flex justify-center items-center gap-2.5 py-3.5 bg-white/50 border-2 border-slate-200 text-slate-700 rounded-2xl font-bold text-sm tracking-wide hover:border-slate-800 hover:text-slate-900 hover:bg-white hover:shadow-md transition-all active:scale-[0.98]"
-                                    >
-                                        <Settings2 className="w-4 h-4" /> Karakteri Yapılandır
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setEditingAgent(agent)}
+                                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 hover:text-slate-900 transition-all active:scale-[0.98]"
+                                        >
+                                            <Settings2 className="w-4 h-4" /> Yapılandır
+                                        </button>
+                                        <button
+                                            onClick={() => openDuplicate(agent)}
+                                            className="p-3 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all active:scale-[0.98]"
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                        </button>
+                                        {agent.agent_id !== LUNA_AGENT_ID && (
+                                            <button
+                                                onClick={() => setDeletingAgent(agent)}
+                                                className="p-3 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all active:scale-[0.98]"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))}
