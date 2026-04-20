@@ -165,7 +165,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"number\": \"{{ $('Şablonu İşle').first().json.whatsappNumber }}\",\n  \"locationMessage\": {\n    \"name\": \"{{ $('Şablonu İşle').first().json.appointmentAddr }}\",\n    \"address\": \"{{ $('Şablonu İşle').first().json.appointmentAddr }}\",\n    \"latitude\": {{ $('Şablonu İşle').first().json.appointmentLat }},\n    \"longitude\": {{ $('Şablonu İşle').first().json.appointmentLng }}\n  }\n}",
+        "jsonBody": "={\n  \"number\": \"{{ $('Şablonu İşle').first().json.whatsappNumber }}\",\n  \"name\": \"Randevu Konumu\",\n  \"address\": \"{{ $('Şablonu İşle').first().json.appointmentAddr || 'Randevu Adresi' }}\",\n  \"latitude\": {{ $('Şablonu İşle').first().json.appointmentLat }},\n  \"longitude\": {{ $('Şablonu İşle').first().json.appointmentLng }}\n}",
         "options": {}
       },
       "id": "a1b2c3d4-0005-0005-0005-000000000005",
