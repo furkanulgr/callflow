@@ -156,7 +156,7 @@ export const QuickCallModal = ({ isOpen, onClose, defaultAgentId }: QuickCallMod
                                 </label>
                                 {phoneNumbers.length === 0 ? (
                                     <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-3">
-                                        Hiç kayıtlı telefon numarası yok. Önce ElevenLabs workspace'ten bir numara bağlayın.
+                                        Hiç kayıtlı telefon numarası yok. Önce Ayarlar'dan bir numara bağlayın.
                                     </div>
                                 ) : (
                                     <select

@@ -323,7 +323,7 @@ export const LiveTestPage = () => {
                         </div>
                         <div className="flex gap-4">
                             <div className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> ElevenLabs AI
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> AI Asistan
                             </div>
                         </div>
                     </div>

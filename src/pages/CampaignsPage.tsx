@@ -633,7 +633,7 @@ export const CampaignsPage = () => {
                                             <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
                                                 <Loader2 className="w-7 h-7 animate-spin text-slate-400" />
                                             </div>
-                                            <p className="text-sm text-slate-500 font-medium">ElevenLabs'ten veriler çekiliyor...</p>
+                                            <p className="text-sm text-slate-500 font-medium">Veriler çekiliyor...</p>
                                         </div>
                                     ) : (
                                         <>
@@ -674,7 +674,7 @@ export const CampaignsPage = () => {
                                                 ) : (
                                                     <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
                                                         <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                                                        <p className="text-xs text-amber-700 font-medium">Agent bulunamadı. ElevenLabs panelinden agent oluşturun.</p>
+                                                        <p className="text-xs text-amber-700 font-medium">Agent bulunamadı. Önce AI Asistanlar sayfasından agent oluşturun.</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -683,7 +683,7 @@ export const CampaignsPage = () => {
                                             <div>
                                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
                                                     <span className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> Arama Numarası</span>
-                                                    <span className="text-[9px] bg-slate-900 text-[#CCFF00] px-2.5 py-1 rounded-full uppercase tracking-widest font-bold">ElevenLabs</span>
+                                                    <span className="text-[9px] bg-slate-900 text-[#CCFF00] px-2.5 py-1 rounded-full uppercase tracking-widest font-bold">SIP</span>
                                                 </label>
                                                 {phoneNumbers.length > 0 ? (
                                                     <div className="space-y-2">
@@ -719,7 +719,7 @@ export const CampaignsPage = () => {
                                                         <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                                                         <div>
                                                             <p className="text-xs font-bold text-red-800">Bağlı numara bulunamadı</p>
-                                                            <p className="text-[10px] text-red-600 mt-0.5 leading-relaxed">ElevenLabs panelinden telefon numarası ekleyin.</p>
+                                                            <p className="text-[10px] text-red-600 mt-0.5 leading-relaxed">Ayarlar'dan telefon numarası ekleyin.</p>
                                                         </div>
                                                     </div>
                                                 )}

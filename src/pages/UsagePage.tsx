@@ -186,7 +186,7 @@ export const UsagePage = () => {
                                 <div>
                                     <h3 className="text-base font-black text-slate-900">Karakter Kotası</h3>
                                     <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                        ElevenLabs aboneliğinin dönem limiti
+                                        Abonelik dönem limiti
                                     </p>
                                 </div>
                                 <div className="text-right">

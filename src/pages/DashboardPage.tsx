@@ -408,7 +408,7 @@ export const DashboardPage = () => {
                                                 {isLoadingCalls ? "..." : calls.length}
                                             </span>
                                         </h2>
-                                        <p className="text-sm text-gray-500 mt-0.5">ElevenLabs üzerinden gerçek zamanlı çağrı verisi</p>
+                                        <p className="text-sm text-gray-500 mt-0.5">Gerçek zamanlı çağrı verisi</p>
                                     </div>
 
                                     {/* Refresh Button */}
