@@ -197,6 +197,42 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [960, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://supabase.lueratech.com/rest/v1/appointments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc3NjIwMDEwMCwiZXhwIjo0OTMxODczNzAwLCJyb2xlIjoiYW5vbiJ9.y0YKT2NdgSchNQ1b0CXKG5Umrmdf-PvpbF9fJV6Teks"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc3NjIwMDEwMCwiZXhwIjo0OTMxODczNzAwLCJyb2xlIjoiYW5vbiJ9.y0YKT2NdgSchNQ1b0CXKG5Umrmdf-PvpbF9fJV6Teks"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"conversation_id\": {{ JSON.stringify($('Veriyi İşle').first().json.conversationId) }},\n  \"customer_name\": {{ JSON.stringify($('Veriyi İşle').first().json.customerName || null) }},\n  \"customer_phone\": {{ JSON.stringify($('Veriyi İşle').first().json.whatsappNumber || null) }},\n  \"appointment_date\": {{ JSON.stringify($('Veriyi İşle').first().json.appointmentDate || null) }},\n  \"appointment_time\": {{ JSON.stringify($('Veriyi İşle').first().json.appointmentTime || null) }},\n  \"appointment_address\": {{ JSON.stringify($('Veriyi İşle').first().json.appointmentAddr || null) }},\n  \"latitude\": {{ $('Veriyi İşle').first().json.appointmentLat || 'null' }},\n  \"longitude\": {{ $('Veriyi İşle').first().json.appointmentLng || 'null' }},\n  \"call_duration_secs\": {{ $('Veriyi İşle').first().json.callDuration || 0 }},\n  \"agent_id\": {{ JSON.stringify($('Veriyi İşle').first().json.agentId || null) }},\n  \"status\": \"confirmed\"\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0011-0011-0011-000000000011",
+      "name": "Supabase: Randevu Kaydet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 380]
     }
   ],
   "connections": {
@@ -231,7 +267,10 @@
     },
     "WhatsApp Mesaj Gönder": {
       "main": [
-        [{ "node": "Webhook Yanıtla", "type": "main", "index": 0 }]
+        [
+          { "node": "Webhook Yanıtla", "type": "main", "index": 0 },
+          { "node": "Supabase: Randevu Kaydet", "type": "main", "index": 0 }
+        ]
       ]
     },
     "Konum var mı?": {

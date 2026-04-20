@@ -1,361 +1,514 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     ChevronLeft, ChevronRight, CalendarDays, Clock,
-    Phone, User, Plus, X, CheckCircle2, Flame
+    Phone, MapPin, User, Plus, X, CheckCircle2,
+    XCircle, Loader2, RefreshCw, Navigation, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { supabase } from "@/lib/supabase";
 
-// We will use the same Queue format to match the "Bekleyen Kuyruk" concept
-const appointments = [
-    { id: 1, name: "Caner Yılmaz", phone: "+90 541 111 22 33", date: "2026-03-01", time: "14:00", tag: "hot", note: "Daha sonra ara denildi (Dün)" },
-    { id: 2, name: "Zeynep Arslan", phone: "+90 542 222 33 44", date: "2026-03-01", time: "11:00", tag: "warm", note: "Randevu teyidi" },
-    { id: 3, name: "Fatma Öztürk", phone: "+90 537 666 77 88", date: "2026-03-07", time: "10:00", tag: "hot", note: "Sözleşme onayı" },
-    { id: 4, name: "Selin Aksoy", phone: "+90 532 000 11 22", date: "2026-03-10", time: "15:30", tag: "warm", note: "İkinci görüşme" },
-    { id: 5, name: "Burak Kaya", phone: "+90 543 333 44 55", date: "2026-03-12", time: "09:00", tag: "hot", note: "Yeni liste taraması" },
-    { id: 6, name: "Elif Demir", phone: "+90 544 444 55 66", date: "2026-03-02", time: "16:00", tag: "warm", note: "Ulaşılamadı (2. deneme)" },
-];
-
-const DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
-const MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-
-function getDaysInMonth(year: number, month: number) {
-    return new Date(year, month + 1, 0).getDate();
+/* ── Types ─────────────────────────────────────────────────── */
+interface Appointment {
+    id: string;
+    conversation_id: string | null;
+    customer_name: string | null;
+    customer_phone: string | null;
+    appointment_date: string | null;
+    appointment_time: string | null;
+    appointment_address: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    call_duration_secs: number | null;
+    agent_id: string | null;
+    status: "confirmed" | "completed" | "cancelled";
+    notes: string | null;
+    created_at: string;
 }
-function getFirstDayOfMonth(year: number, month: number) {
-    return (new Date(year, month, 1).getDay() + 6) % 7; // Monday = 0
+
+/* ── Constants ──────────────────────────────────────────────── */
+const DAYS   = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+const STATUS_CFG = {
+    confirmed: { label: "Onaylı",    cls: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+    completed: { label: "Tamamlandı",cls: "bg-slate-100 text-slate-600 border-slate-200",       dot: "bg-slate-400"  },
+    cancelled: { label: "İptal",     cls: "bg-red-100 text-red-600 border-red-200",             dot: "bg-red-400"    },
+};
+
+const EMPTY_FORM = { customer_name: "", customer_phone: "", appointment_date: "", appointment_time: "", appointment_address: "", notes: "" };
+
+/* ── Helpers ────────────────────────────────────────────────── */
+function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
+function getFirstDay(y: number, m: number)    { return (new Date(y, m, 1).getDay() + 6) % 7; }
+function pad(n: number)                        { return n.toString().padStart(2, "0"); }
+function fmtDuration(secs: number | null)      {
+    if (!secs) return null;
+    const m = Math.floor(secs / 60), s = secs % 60;
+    return m > 0 ? `${m} dk ${s} sn` : `${s} sn`;
+}
+// Try to parse ISO date from appointment_date field (might be text like "Perşembe")
+function tryParseDate(d: string | null): string | null {
+    if (!d) return null;
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+    return iso;
 }
 
+/* ══════════════════════════════════════════════════════════════ */
 export const CalendarPage = () => {
     const today = new Date();
-    const [current, setCurrent] = useState({ year: 2026, month: 2 });
-    const [selected, setSelected] = useState<string | null>("2026-03-01");
-    const [detailAppt, setDetailAppt] = useState<typeof appointments[0] | null>(null);
-    const [showNewPlan, setShowNewPlan] = useState(false);
-    const [newPlan, setNewPlan] = useState({ name: "", phone: "", date: "", time: "", note: "" });
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [loading, setLoading]           = useState(true);
+    const [saving, setSaving]             = useState(false);
+    const [error, setError]               = useState<string | null>(null);
 
+    const [current, setCurrent]     = useState({ year: today.getFullYear(), month: today.getMonth() });
+    const [selected, setSelected]   = useState<string>(() => {
+        return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+    });
+    const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
+    const [showNew, setShowNew]       = useState(false);
+    const [form, setForm]             = useState(EMPTY_FORM);
+
+    /* ── Fetch ───────────────────────────────────────────────── */
+    const fetchAppointments = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        const { data, error } = await supabase
+            .from("appointments")
+            .select("*")
+            .order("created_at", { ascending: false });
+        if (error) setError(error.message);
+        else setAppointments((data || []) as Appointment[]);
+        setLoading(false);
+    }, []);
+
+    useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
+
+    /* ── Status update ──────────────────────────────────────── */
+    const updateStatus = async (id: string, status: Appointment["status"]) => {
+        await supabase.from("appointments").update({ status }).eq("id", id);
+        setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+        if (detailAppt?.id === id) setDetailAppt(prev => prev ? { ...prev, status } : null);
+    };
+
+    /* ── Save new ───────────────────────────────────────────── */
+    const handleSave = async () => {
+        if (!form.customer_name.trim() || !form.appointment_date) return;
+        setSaving(true);
+        const { error } = await supabase.from("appointments").insert({
+            ...form,
+            status: "confirmed",
+        });
+        if (error) setError(error.message);
+        else { setShowNew(false); setForm(EMPTY_FORM); fetchAppointments(); }
+        setSaving(false);
+    };
+
+    /* ── Derived ─────────────────────────────────────────────── */
     const { year, month } = current;
     const daysInMonth = getDaysInMonth(year, month);
-    const firstDay = getFirstDayOfMonth(year, month);
-    const pad = (n: number) => n.toString().padStart(2, "0");
+    const firstDay    = getFirstDay(year, month);
 
-    const prev = () => setCurrent(c => c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 });
-    const next = () => setCurrent(c => c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 });
+    // Map appointments to calendar dates (only those with ISO date in appointment_date)
+    const calMap = new Map<string, Appointment[]>();
+    appointments.forEach(a => {
+        const d = tryParseDate(a.appointment_date);
+        if (d) {
+            if (!calMap.has(d)) calMap.set(d, []);
+            calMap.get(d)!.push(a);
+        }
+    });
 
-    const apptsByDate = (date: string) => appointments.filter(a => a.date === date).sort((a, b) => a.time.localeCompare(b.time));
-    const selectedAppts = selected ? apptsByDate(selected) : [];
+    const selectedCalAppts = calMap.get(selected) || [];
 
+    // Stats
+    const totalCount     = appointments.length;
+    const confirmedCount = appointments.filter(a => a.status === "confirmed").length;
+    const todayStr       = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    const todayCount     = (calMap.get(todayStr) || []).length;
+    const completedCount = appointments.filter(a => a.status === "completed").length;
+
+    /* ══════════════════════════════════════════════════════════ */
     return (
-        <div className="h-[calc(100vh-80px)] xl:h-screen flex flex-col p-4 md:p-6 lg:pb-6 pb-20 overflow-hidden">
-            <div className="w-full max-w-[1400px] mx-auto flex flex-col h-full gap-6">
+        <div className="min-h-screen p-6 md:p-8 bg-[#FAFAFC]">
+            <div className="max-w-[1400px] mx-auto space-y-6">
 
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2.5">
-                            <CalendarDays className="w-6 h-6 text-[#CCFF00]" />
-                            Zamanlanmış Çağrılar
-                        </h1>
-                        <p className="text-sm text-gray-500 mt-1">Aramak için beklenen numaralar ve randevular</p>
+                        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Takvim</h1>
+                        <p className="text-sm text-slate-500 mt-1">AI aramalarından gelen randevular ve planlama</p>
                     </div>
-                    <button onClick={() => setShowNewPlan(true)} className="flex items-center gap-2 bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-slate-900 transition-all w-full sm:w-auto justify-center group">
-                        <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Yeni Plan Oluştur
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={fetchAppointments} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 transition-all">
+                            <RefreshCw className="w-4 h-4" /> Yenile
+                        </button>
+                        <button onClick={() => setShowNew(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-900/10">
+                            <Plus className="w-4 h-4" /> Yeni Randevu
+                        </button>
+                    </div>
                 </div>
 
-                {/* Main Content Area */}
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
-
-                    {/* Left Panel: Calendar Grid */}
-                    <div className="lg:col-span-8 flex flex-col bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden relative">
-                        {/* Decorative glow */}
-                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#CCFF00]/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none"></div>
-
-                        <div className="p-6 md:p-8 flex flex-col h-full relative z-10">
-                            {/* Month Navigation */}
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-2xl font-black text-white px-2 tracking-wide">
-                                    {MONTHS[month]} <span className="text-slate-500 font-medium">{year}</span>
-                                </h2>
-                                <div className="flex gap-2 bg-slate-800/50 p-1.5 rounded-2xl border border-slate-700/50">
-                                    <button onClick={prev} className="p-2.5 rounded-xl hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <button onClick={next} className="p-2.5 rounded-xl hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
-                                </div>
+                {/* Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                        { label: "Toplam Randevu", value: totalCount,     color: "text-slate-800",   bg: "bg-slate-50",   icon: CalendarDays },
+                        { label: "Onaylı",          value: confirmedCount, color: "text-emerald-700", bg: "bg-emerald-50", icon: CheckCircle2 },
+                        { label: "Bugün",           value: todayCount,     color: "text-blue-700",    bg: "bg-blue-50",    icon: Clock },
+                        { label: "Tamamlandı",      value: completedCount, color: "text-slate-500",   bg: "bg-slate-50",   icon: CheckCircle2 },
+                    ].map(s => (
+                        <div key={s.label} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex items-center gap-3">
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", s.bg)}>
+                                <s.icon className={cn("w-5 h-5", s.color)} />
                             </div>
-
-                            {/* Days Header */}
-                            <div className="grid grid-cols-7 mb-4 px-2">
-                                {DAYS.map(d => (
-                                    <div key={d} className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-widest">{d}</div>
-                                ))}
+                            <div>
+                                <p className={cn("text-2xl font-bold tracking-tight", s.color)}>{s.value}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.label}</p>
                             </div>
+                        </div>
+                    ))}
+                </div>
 
-                            {/* Calendar Grid */}
-                            <div className="grid grid-cols-7 gap-2 lg:gap-3 flex-1 px-2">
-                                {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="opacity-0" />)}
+                {error && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
+                    </div>
+                )}
 
-                                {Array.from({ length: daysInMonth }).map((_, i) => {
-                                    const day = i + 1;
-                                    const dateStr = `${year}-${pad(month + 1)}-${pad(day)}`;
-                                    const appts = apptsByDate(dateStr);
-                                    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-                                    const isSelected = selected === dateStr;
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                                    return (
-                                        <button
-                                            key={day}
-                                            onClick={() => setSelected(dateStr)}
-                                            className={cn(
-                                                "relative flex flex-col items-center pt-3 pb-2 rounded-2xl transition-all duration-300 min-h-[80px] group border",
-                                                isSelected
-                                                    ? "bg-[#CCFF00] border-[#CCFF00] shadow-[0_0_20px_rgba(204,255,0,0.2)] scale-105 z-10"
-                                                    : isToday
-                                                        ? "bg-slate-800 border-slate-600 shadow-inner"
-                                                        : "bg-slate-800/30 border-slate-800 hover:bg-slate-800 hover:border-slate-700"
-                                            )}
-                                        >
-                                            <span className={cn(
-                                                "text-lg font-bold mb-1",
-                                                isSelected ? "text-slate-900" : isToday ? "text-white" : "text-slate-300 group-hover:text-white"
-                                            )}>
-                                                {day}
-                                            </span>
+                    {/* ── Calendar Grid ── */}
+                    <div className="lg:col-span-7 bg-slate-900 rounded-2xl border border-slate-800 shadow-xl p-6 md:p-8">
+                        {/* Month nav */}
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-2xl font-black text-white">
+                                {MONTHS[month]} <span className="text-slate-500 font-medium">{year}</span>
+                            </h2>
+                            <div className="flex gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50">
+                                <button onClick={() => setCurrent(c => c.month === 0 ? { year: c.year-1, month: 11 } : { ...c, month: c.month-1 })}
+                                    className="p-2.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setCurrent({ year: today.getFullYear(), month: today.getMonth() })}
+                                    className="px-3 text-xs font-bold text-slate-400 hover:text-white transition-all">
+                                    Bugün
+                                </button>
+                                <button onClick={() => setCurrent(c => c.month === 11 ? { year: c.year+1, month: 0 } : { ...c, month: c.month+1 })}
+                                    className="p-2.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
 
-                                            {/* Indicators */}
-                                            {appts.length > 0 && (
-                                                <div className="flex flex-wrap justify-center gap-1 px-2 mt-auto">
-                                                    {appts.slice(0, 3).map((a, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className={cn(
-                                                                "w-1.5 h-1.5 rounded-full shadow-sm",
-                                                                isSelected
-                                                                    ? "bg-slate-900"
-                                                                    : a.tag === "hot"
-                                                                        ? "bg-red-500 shadow-red-500/50"
-                                                                        : "bg-[#CCFF00] shadow-[#CCFF00]/50"
-                                                            )}
-                                                        />
-                                                    ))}
-                                                    {appts.length > 3 && (
-                                                        <div className={cn("w-1.5 h-1.5 rounded-full opacity-50", isSelected ? "bg-slate-900" : "bg-slate-400")} />
-                                                    )}
-                                                </div>
+                        {/* Day headers */}
+                        <div className="grid grid-cols-7 mb-3">
+                            {DAYS.map(d => (
+                                <div key={d} className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-widest">{d}</div>
+                            ))}
+                        </div>
+
+                        {/* Grid */}
+                        <div className="grid grid-cols-7 gap-1.5">
+                            {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+                            {Array.from({ length: daysInMonth }).map((_, i) => {
+                                const day     = i + 1;
+                                const dateStr = `${year}-${pad(month+1)}-${pad(day)}`;
+                                const appts   = calMap.get(dateStr) || [];
+                                const isToday = dateStr === todayStr;
+                                const isSel   = selected === dateStr;
+
+                                return (
+                                    <button key={day} onClick={() => setSelected(dateStr)}
+                                        className={cn(
+                                            "relative flex flex-col items-center py-3 rounded-xl transition-all duration-200 min-h-[64px] border",
+                                            isSel   ? "bg-[#CCFF00] border-[#CCFF00] scale-105 shadow-[0_0_16px_rgba(204,255,0,0.25)] z-10"
+                                            : isToday ? "bg-slate-800 border-slate-600"
+                                            : "bg-slate-800/30 border-slate-800 hover:bg-slate-800 hover:border-slate-700"
+                                        )}>
+                                        <span className={cn("text-sm font-bold",
+                                            isSel ? "text-slate-900" : isToday ? "text-white" : "text-slate-300")}>
+                                            {day}
+                                        </span>
+                                        {appts.length > 0 && (
+                                            <div className="flex gap-1 mt-auto pt-1 flex-wrap justify-center px-1">
+                                                {appts.slice(0, 3).map((a, idx) => (
+                                                    <div key={idx} className={cn("w-1.5 h-1.5 rounded-full",
+                                                        isSel ? "bg-slate-900"
+                                                        : a.status === "confirmed" ? "bg-emerald-400"
+                                                        : a.status === "completed" ? "bg-slate-400"
+                                                        : "bg-red-400")} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Selected day appointments */}
+                        {selectedCalAppts.length > 0 && (
+                            <div className="mt-6 pt-6 border-t border-slate-800">
+                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                    {pad(parseInt(selected.split("-")[2]))} {MONTHS[parseInt(selected.split("-")[1])-1]} — {selectedCalAppts.length} randevu
+                                </p>
+                                <div className="space-y-2">
+                                    {selectedCalAppts.map(a => (
+                                        <button key={a.id} onClick={() => setDetailAppt(a)}
+                                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 transition-all text-left">
+                                            <div className={cn("w-2 h-2 rounded-full flex-shrink-0", STATUS_CFG[a.status].dot)} />
+                                            <span className="text-sm font-bold text-white flex-1 truncate">{a.customer_name || "—"}</span>
+                                            {a.appointment_time && (
+                                                <span className="text-xs font-mono text-[#CCFF00]">{a.appointment_time}</span>
                                             )}
                                         </button>
-                                    );
-                                })}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
-                    {/* Right Panel: Daily Agenda */}
-                    <div className="lg:col-span-4 flex flex-col gap-6 min-h-0">
-
-                        {/* Selected Day Agenda */}
-                        <div className="bg-white rounded-2xl border border-gray-200/60 shadow-md p-6 flex flex-col flex-1 min-h-0 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full blur-[60px] -mr-10 -mt-10 pointer-events-none"></div>
-
-                            <div className="flex items-center justify-between mb-6 relative z-10">
-                                <div>
-                                    <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Seçili Gün</h3>
-                                    <div className="text-2xl font-black text-slate-900 tracking-tight flex items-baseline gap-2">
-                                        {selected ? `${pad(parseInt(selected.split("-")[2]))} ${MONTHS[parseInt(selected.split("-")[1]) - 1]}` : "Gün Seçin"}
-                                        {selected && <span className="text-sm font-bold text-slate-400">{year}</span>}
-                                    </div>
-                                </div>
-                                <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
-                                    <span className="text-[#CCFF00] font-bold text-sm">{selectedAppts.length}</span>
-                                </div>
+                    {/* ── Appointment List ── */}
+                    <div className="lg:col-span-5 flex flex-col gap-4">
+                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Tüm Randevular</h3>
+                                <span className="text-xs font-bold text-slate-400">{totalCount} kayıt</span>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative z-10 space-y-3">
-                                {selectedAppts.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-60">
-                                        <div className="w-16 h-16 rounded-3xl border-2 border-dashed border-gray-300 flex items-center justify-center mb-4">
-                                            <CalendarDays className="w-6 h-6 text-gray-400" />
-                                        </div>
-                                        <p className="text-sm font-bold text-gray-400">Bu gün için planlanan arama yok.</p>
-                                    </div>
-                                ) : (
-                                    selectedAppts.map(a => (
-                                        <div
-                                            key={a.id}
-                                            onClick={() => setDetailAppt(a)}
-                                            className="group flex gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-slate-900 hover:text-white border border-gray-100 hover:border-slate-800 transition-all cursor-pointer shadow-sm hover:shadow-xl"
-                                        >
-                                            {/* Time block */}
-                                            <div className="flex flex-col items-center justify-center flex-shrink-0 w-14">
-                                                <p className="text-sm font-black text-slate-900 group-hover:text-[#CCFF00] transition-colors">{a.time}</p>
-                                            </div>
-
-                                            {/* Divider */}
-                                            <div className="w-px bg-gray-200 group-hover:bg-slate-700 transition-colors my-1"></div>
-
-                                            <div className="flex-1 min-w-0 py-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="text-base font-bold text-slate-900 group-hover:text-white truncate transition-colors">{a.name}</p>
-                                                    {a.tag === "hot" && <Flame className="w-3 h-3 text-red-500 flex-shrink-0" />}
+                            {loading ? (
+                                <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span className="text-sm">Yükleniyor...</span>
+                                </div>
+                            ) : appointments.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                                    <CalendarDays className="w-10 h-10 opacity-30" />
+                                    <p className="text-sm font-medium">Henüz randevu yok</p>
+                                    <p className="text-xs text-slate-300">AI aramaları tamamlandıkça buraya düşecek</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
+                                    {appointments.map(a => {
+                                        const sc = STATUS_CFG[a.status];
+                                        return (
+                                            <button key={a.id} onClick={() => setDetailAppt(a)}
+                                                className="w-full flex items-start gap-4 px-6 py-4 hover:bg-slate-50/80 transition-all text-left group">
+                                                {/* Avatar */}
+                                                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-slate-200 transition-colors">
+                                                    <User className="w-4 h-4 text-slate-500" />
                                                 </div>
-                                                <p className="text-[11px] font-mono text-gray-500 group-hover:text-slate-400 transition-colors mb-1.5">{a.phone}</p>
-                                                <p className="text-xs text-gray-600 group-hover:text-slate-300 font-medium line-clamp-1 italic transition-colors">"{a.note}"</p>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <p className="text-sm font-bold text-slate-800 truncate">
+                                                            {a.customer_name || "İsimsiz"}
+                                                        </p>
+                                                        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md border flex-shrink-0", sc.cls)}>
+                                                            {sc.label}
+                                                        </span>
+                                                    </div>
+                                                    {a.customer_phone && (
+                                                        <p className="text-xs font-mono text-slate-400 mb-1">📞 {a.customer_phone}</p>
+                                                    )}
+                                                    <div className="flex items-center gap-3 flex-wrap">
+                                                        {a.appointment_date && (
+                                                            <span className="text-xs text-slate-500 flex items-center gap-1">
+                                                                <CalendarDays className="w-3 h-3" /> {a.appointment_date}
+                                                                {a.appointment_time && ` · ${a.appointment_time}`}
+                                                            </span>
+                                                        )}
+                                                        {(a.latitude && a.longitude) && (
+                                                            <span className="text-xs text-emerald-600 flex items-center gap-1">
+                                                                <MapPin className="w-3 h-3" /> Konum var
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className="text-[11px] text-slate-300 flex-shrink-0 mt-0.5">
+                                                    {new Date(a.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
-
-                        {/* Upcoming Mini List */}
-                        <div className="bg-slate-900 rounded-2xl p-6 shadow-xl flex-shrink-0 border border-slate-800">
-                            <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <Clock className="w-3.5 h-3.5 text-[#CCFF00]" /> Yaklaşan Tüm Görevler
-                            </h3>
-                            <div className="space-y-4">
-                                {appointments.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(a => (
-                                    <div key={a.id} className="flex items-center gap-3 group">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex flex-col items-center justify-center border border-slate-700/50 group-hover:border-[#CCFF00]/50 transition-colors">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{MONTHS[parseInt(a.date.split("-")[1]) - 1].slice(0, 3)}</span>
-                                            <span className="text-sm font-black text-white leading-none">{pad(parseInt(a.date.split("-")[2]))}</span>
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-sm font-bold text-slate-200 truncate">{a.name}</p>
-                                            <p className="text-xs font-medium text-slate-500">{a.time} - Bekliyor</p>
-                                        </div>
-                                        {a.tag === "hot" && <Flame className="w-4 h-4 text-red-500/80 mr-1" />}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
                     </div>
                 </div>
             </div>
 
-            {/* Modal Detail Overlay */}
+            {/* ── Detail Modal ── */}
             {detailAppt && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden ring-1 ring-white/10" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setDetailAppt(null)} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 overflow-hidden">
 
-                        <div className="bg-slate-900 p-6 flex flex-col items-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-b from-[#CCFF00]/10 to-transparent"></div>
-                            <button onClick={() => setDetailAppt(null)} className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors z-10">
-                                <X className="w-5 h-5" />
+                        {/* Header */}
+                        <div className="bg-slate-900 p-6 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#CCFF00]/10 to-transparent pointer-events-none" />
+                            <button onClick={() => setDetailAppt(null)} className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                                <X className="w-4 h-4" />
                             </button>
-
-                            <div className="w-20 h-20 rounded-[1.5rem] bg-slate-800 border-2 border-slate-700 shadow-xl flex items-center justify-center mb-4 relative z-10">
-                                <span className="text-3xl font-black text-white">{detailAppt.name[0]}</span>
+                            <div className="flex items-center gap-4 relative z-10">
+                                <div className="w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                                    <span className="text-2xl font-black text-white">
+                                        {(detailAppt.customer_name || "?")[0].toUpperCase()}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-white">{detailAppt.customer_name || "İsimsiz"}</h2>
+                                    {detailAppt.customer_phone && (
+                                        <p className="text-sm font-mono text-[#CCFF00] mt-0.5">{detailAppt.customer_phone}</p>
+                                    )}
+                                </div>
                             </div>
-                            <h2 className="text-xl font-black text-white px-8 text-center relative z-10">{detailAppt.name}</h2>
-                            <p className="text-sm font-mono text-[#CCFF00] mt-1 relative z-10">{detailAppt.phone}</p>
+                            <div className="mt-4 relative z-10">
+                                <span className={cn("text-[11px] font-bold px-3 py-1.5 rounded-lg border", STATUS_CFG[detailAppt.status].cls)}>
+                                    {STATUS_CFG[detailAppt.status].label}
+                                </span>
+                            </div>
                         </div>
 
-                        <div className="p-6 bg-gray-50/50 space-y-4">
+                        {/* Body */}
+                        <div className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center">
-                                    <CalendarDays className="w-5 h-5 text-gray-400 mb-2" />
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Tarih</p>
-                                    <p className="text-sm font-bold text-gray-900">{parseInt(detailAppt.date.split("-")[2])} {MONTHS[parseInt(detailAppt.date.split("-")[1]) - 1]} {detailAppt.date.split("-")[0]}</p>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                        <CalendarDays className="w-3 h-3" /> Randevu Tarihi
+                                    </p>
+                                    <p className="text-sm font-bold text-slate-800">{detailAppt.appointment_date || "—"}</p>
                                 </div>
-                                <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center">
-                                    <Clock className="w-5 h-5 text-gray-400 mb-2" />
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Saat</p>
-                                    <p className="text-sm font-bold text-gray-900">{detailAppt.time}</p>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" /> Saat
+                                    </p>
+                                    <p className="text-sm font-bold text-slate-800">{detailAppt.appointment_time || "—"}</p>
                                 </div>
                             </div>
 
-                            <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100">
-                                <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                    <Flame className="w-3 h-3" /> Görev Notu (Prompt)
-                                </p>
-                                <p className="text-sm font-medium text-amber-900">"{detailAppt.note}"</p>
-                            </div>
+                            {detailAppt.appointment_address && (
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" /> Adres
+                                    </p>
+                                    <p className="text-sm font-bold text-slate-800">{detailAppt.appointment_address}</p>
+                                </div>
+                            )}
 
-                            <button onClick={() => setDetailAppt(null)} className="w-full mt-2 flex items-center justify-center gap-2 bg-slate-900 text-[#CCFF00] py-3.5 rounded-xl font-bold text-sm shadow-md hover:shadow-lg hover:shadow-slate-900/20 active:scale-[0.98] transition-all">
-                                Kapat
-                            </button>
+                            {detailAppt.latitude && detailAppt.longitude && (
+                                <a href={`https://maps.google.com/?q=${detailAppt.latitude},${detailAppt.longitude}`}
+                                    target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-all">
+                                    <Navigation className="w-4 h-4" />
+                                    Google Maps'te Aç
+                                    <span className="text-xs font-mono text-emerald-500 ml-auto">
+                                        {detailAppt.latitude.toFixed(4)}, {detailAppt.longitude.toFixed(4)}
+                                    </span>
+                                </a>
+                            )}
+
+                            {detailAppt.call_duration_secs != null && detailAppt.call_duration_secs > 0 && (
+                                <div className="flex items-center gap-2 text-xs text-slate-400">
+                                    <Phone className="w-3.5 h-3.5" />
+                                    Görüşme süresi: <span className="font-bold text-slate-600">{fmtDuration(detailAppt.call_duration_secs)}</span>
+                                </div>
+                            )}
+
+                            {detailAppt.notes && (
+                                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                                    <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">Not</p>
+                                    <p className="text-sm text-amber-900">{detailAppt.notes}</p>
+                                </div>
+                            )}
+
+                            {/* Status actions */}
+                            {detailAppt.status !== "completed" && detailAppt.status !== "cancelled" && (
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => updateStatus(detailAppt.id, "completed")}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-900 transition-all">
+                                        <CheckCircle2 className="w-4 h-4" /> Tamamlandı
+                                    </button>
+                                    <button onClick={() => updateStatus(detailAppt.id, "cancelled")}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-500 text-sm font-bold hover:bg-red-50 transition-all">
+                                        <XCircle className="w-4 h-4" /> İptal Et
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
-            {/* Yeni Plan Modal */}
-            {showNewPlan && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowNewPlan(false)} />
-                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100">
-                        {/* Modal Header */}
+
+            {/* ── New Appointment Modal ── */}
+            {showNew && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowNew(false)} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100">
                         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-800">Yeni Plan Oluştur</h2>
-                                <p className="text-xs text-slate-400 mt-0.5">Yeni bir arama planı ekleyin</p>
-                            </div>
-                            <button onClick={() => setShowNewPlan(false)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all">
-                                <X className="w-5 h-5" />
+                            <h2 className="text-lg font-bold text-slate-800">Yeni Randevu</h2>
+                            <button onClick={() => setShowNew(false)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50 transition-all">
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
-
-                        {/* Modal Body */}
                         <div className="px-6 py-5 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">İsim</label>
-                                    <input type="text" value={newPlan.name}
-                                        onChange={(e) => setNewPlan(p => ({ ...p, name: e.target.value }))}
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">İsim *</label>
+                                    <input type="text" value={form.customer_name}
+                                        onChange={e => setForm(p => ({ ...p, customer_name: e.target.value }))}
                                         placeholder="Müşteri adı"
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/10 focus:border-slate-400 transition-all" />
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Telefon</label>
-                                    <input type="tel" value={newPlan.phone}
-                                        onChange={(e) => setNewPlan(p => ({ ...p, phone: e.target.value }))}
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Telefon</label>
+                                    <input type="tel" value={form.customer_phone}
+                                        onChange={e => setForm(p => ({ ...p, customer_phone: e.target.value }))}
                                         placeholder="+90 5XX XXX XX XX"
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/10 focus:border-slate-400 transition-all" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Tarih</label>
-                                    <input type="date" value={newPlan.date}
-                                        onChange={(e) => setNewPlan(p => ({ ...p, date: e.target.value }))}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Tarih *</label>
+                                    <input type="date" value={form.appointment_date}
+                                        onChange={e => setForm(p => ({ ...p, appointment_date: e.target.value }))}
+                                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/10 focus:border-slate-400 transition-all" />
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Saat</label>
-                                    <input type="time" value={newPlan.time}
-                                        onChange={(e) => setNewPlan(p => ({ ...p, time: e.target.value }))}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all" />
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Saat</label>
+                                    <input type="time" value={form.appointment_time}
+                                        onChange={e => setForm(p => ({ ...p, appointment_time: e.target.value }))}
+                                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/10 focus:border-slate-400 transition-all" />
                                 </div>
                             </div>
                             <div>
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Not</label>
-                                <textarea value={newPlan.note}
-                                    onChange={(e) => setNewPlan(p => ({ ...p, note: e.target.value }))}
-                                    placeholder="Görev notu veya açıklama..."
-                                    rows={3}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#CCFF00]/30 focus:border-[#CCFF00]/50 transition-all resize-none" />
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Adres</label>
+                                <input type="text" value={form.appointment_address}
+                                    onChange={e => setForm(p => ({ ...p, appointment_address: e.target.value }))}
+                                    placeholder="Randevu adresi"
+                                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/10 focus:border-slate-400 transition-all" />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Not</label>
+                                <textarea value={form.notes}
+                                    onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                                    placeholder="Ek bilgi..."
+                                    rows={2}
+                                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/10 focus:border-slate-400 transition-all resize-none" />
                             </div>
                         </div>
-
-                        {/* Modal Footer */}
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
-                            <button onClick={() => setShowNewPlan(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all">
+                        <div className="flex gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+                            <button onClick={() => setShowNew(false)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all">
                                 İptal
                             </button>
-                            <button
-                                onClick={() => {
-                                    setShowNewPlan(false);
-                                    setNewPlan({ name: "", phone: "", date: "", time: "", note: "" });
-                                }}
-                                disabled={!newPlan.name || !newPlan.phone || !newPlan.date || !newPlan.time}
-                                className={cn("flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all",
-                                    newPlan.name && newPlan.phone && newPlan.date && newPlan.time
-                                        ? "bg-slate-800 text-white hover:bg-slate-900 shadow-lg shadow-slate-900/10"
-                                        : "bg-slate-100 text-slate-300 cursor-not-allowed"
-                                )}>
-                                <Plus className="w-4 h-4" /> Plan Oluştur
+                            <button onClick={handleSave}
+                                disabled={!form.customer_name.trim() || !form.appointment_date || saving}
+                                className={cn("flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
+                                    form.customer_name.trim() && form.appointment_date && !saving
+                                        ? "bg-slate-800 text-white hover:bg-slate-900"
+                                        : "bg-slate-100 text-slate-300 cursor-not-allowed")}>
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                Kaydet
                             </button>
                         </div>
                     </div>
