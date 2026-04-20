@@ -345,55 +345,6 @@ export const DashboardPage = () => {
 
                 </div>
 
-                {/* ── USAGE STRIP ── */}
-                {subscription && (() => {
-                    const used = subscription.character_count || 0;
-                    const limit = subscription.character_limit || 0;
-                    const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-                    const estTRY = used * CHAR_RATE_TRY;
-                    const estMin = Math.round(used / CHARS_PER_MINUTE);
-                    const barCls = pct >= 90 ? "bg-red-500" : pct >= 75 ? "bg-amber-500" : "bg-[#CCFF00]";
-                    return (
-                        <Link
-                            to="/usage"
-                            className="block bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md hover:border-[#CCFF00]/50 transition-all mb-6 group"
-                        >
-                            <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                <div className="flex items-center gap-3 min-w-[180px]">
-                                    <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shrink-0">
-                                        <BarChart3 className="w-5 h-5 text-[#CCFF00]" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bu Dönem</p>
-                                        <p className="text-sm font-black text-slate-900">Kullanım & Tahmini Fatura</p>
-                                    </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-1.5 text-xs font-bold">
-                                        <span className="text-slate-600">
-                                            {used.toLocaleString("tr-TR")} karakter · ≈ {estMin} dk
-                                        </span>
-                                        <span className="text-slate-900">%{pct}</span>
-                                    </div>
-                                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div className={cn("h-full rounded-full transition-all duration-700", barCls)} style={{ width: `${pct}%` }} />
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4 md:border-l md:border-slate-100 md:pl-4">
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tahmini</p>
-                                        <p className="text-xl font-black text-emerald-600">
-                                            {estTRY.toLocaleString("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2 })}
-                                        </p>
-                                    </div>
-                                    <div className="text-xs font-black text-slate-400 group-hover:text-slate-900 transition-colors whitespace-nowrap">
-                                        Detay →
-                                    </div>
-                                </div>
-                            </div>
-                        </Link>
-                    );
-                })()}
 
                 {/* ── CALL LOG ── */}
                 <div className="grid grid-cols-1 gap-6">
