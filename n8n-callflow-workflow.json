@@ -1,0 +1,254 @@
+{
+  "name": "CallFlow — ElevenLabs Post-Call WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "elevenlabs-postcall",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "ElevenLabs Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "callflow-postcall"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ElevenLabs post-call webhook payload\nconst body = $input.first().json.body || $input.first().json;\n\n// Temel alanlar\nconst conversationId = body.conversation_id || '';\nconst agentId        = body.agent_id || '';\nconst callDuration   = body.call_duration_secs || 0;\nconst transcript     = body.transcript || [];\nconst callSuccess    = body.call_successful || false;\n\n// Telefon numarası — metadata veya conversation_initiation_client_data içinde\nconst metadata   = body.metadata || {};\nconst clientData = body.conversation_initiation_client_data || {};\nconst rawPhone   = metadata.phone_number\n  || clientData.to_number\n  || body.to_number\n  || '';\n\n// WhatsApp için format: sadece rakamlar (ülke kodu dahil)\nconst whatsappNumber = rawPhone.replace(/\\D/g, '');\n\n// Data collection (agent'ta ayarlıysa)\nconst dc = body.data_collection_results || {};\nconst customerName    = dc.customer_name?.value    || '';\nconst appointmentDate = dc.appointment_date?.value || '';\nconst appointmentTime = dc.appointment_time?.value || '';\nconst appointmentAddr = dc.appointment_address?.value || '';\nconst appointmentLat  = dc.appointment_lat?.value  || null;\nconst appointmentLng  = dc.appointment_lng?.value  || null;\n\n// Süre formatı\nconst mins = Math.floor(callDuration / 60);\nconst secs = callDuration % 60;\nconst durationText = mins > 0 ? `${mins} dk ${secs} sn` : `${secs} sn`;\n\nreturn [{\n  json: {\n    conversationId,\n    agentId,\n    callDuration,\n    durationText,\n    callSuccess,\n    whatsappNumber,\n    customerName,\n    appointmentDate,\n    appointmentTime,\n    appointmentAddr,\n    appointmentLat,\n    appointmentLng,\n    hasAppointment: !!(appointmentDate || appointmentTime),\n    hasLocation: !!(appointmentLat && appointmentLng)\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Veriyi İşle",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-phone",
+              "leftValue": "={{ $json.whatsappNumber }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Telefon var mı?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://supabase.lueratech.com/rest/v1/whatsapp_templates?is_active=eq.true&order=created_at.desc&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc3NjIwMDEwMCwiZXhwIjo0OTMxODczNzAwLCJyb2xlIjoiYW5vbiJ9.y0YKT2NdgSchNQ1b0CXKG5Umrmdf-PvpbF9fJV6Teks"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc3NjIwMDEwMCwiZXhwIjo0OTMxODczNzAwLCJyb2xlIjoiYW5vbiJ9.y0YKT2NdgSchNQ1b0CXKG5Umrmdf-PvpbF9fJV6Teks"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0009-0009-0009-000000000009",
+      "name": "Supabase: Aktif Şablonu Al",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Supabase'den gelen aktif şablon\nconst templates = $input.first().json;\nconst callData  = $('Veriyi İşle').first().json;\n\n// ─── Fallback: Supabase'de aktif şablon yoksa bunu kullan ───\nconst FALLBACK = [\n  '━━━━━━━━━━━━━━━━━━━━━',\n  '🤖 *LUERA CallFlow*',\n  '━━━━━━━━━━━━━━━━━━━━━',\n  '',\n  'Merhaba *{{isim}}!* 👋',\n  '',\n  'AI asistanımızla görüşmeniz başarıyla tamamlandı. ✅',\n  '⏱ Görüşme süresi: _{{sure}}_',\n  '{{randevu_bolumu}}',\n  '',\n  'Herhangi bir sorunuz için bizi aramaktan çekinmeyin. 😊',\n  '',\n  '_Teşekkürler, görüşmek üzere!_ 🙏',\n  '*LUERA Ekibi*'\n].join('\\n');\n\n// Şablon içeriğini belirle (Supabase'den \"message\" veya \"content\" alanı)\nlet templateContent = '';\nif (Array.isArray(templates) && templates.length > 0) {\n  const tpl = templates[0];\n  templateContent = tpl.message || tpl.content || '';\n}\nif (!templateContent.trim()) {\n  templateContent = FALLBACK;\n}\n\n// Randevu bölümü — sadece veri varsa göster\nlet randevuBolumu = '';\nif (callData.appointmentDate || callData.appointmentTime || callData.appointmentAddr) {\n  randevuBolumu = '\\n📅 *Randevu Bilgileriniz*\\n──────────────────────';\n  if (callData.appointmentDate) randevuBolumu += `\\n📆 Tarih: *${callData.appointmentDate}*`;\n  if (callData.appointmentTime) randevuBolumu += `\\n🕐 Saat: *${callData.appointmentTime}*`;\n  if (callData.appointmentAddr) randevuBolumu += `\\n📍 Adres: ${callData.appointmentAddr}`;\n}\n\n// Müşteri adı — boşsa nazik fallback\nconst isim = (callData.customerName || '').trim() || 'Değerli Müşterimiz';\n\n// Değişken yerine koy (her iki adres formatını da destekle)\nconst messageText = templateContent\n  .replace(/\\{\\{isim\\}\\}/gi, isim)\n  .replace(/\\{\\{sure\\}\\}/gi, callData.durationText || '')\n  .replace(/\\{\\{randevu_tarihi\\}\\}/gi, callData.appointmentDate || '')\n  .replace(/\\{\\{randevu_saati\\}\\}/gi, callData.appointmentTime || '')\n  .replace(/\\{\\{randevu_adresi\\}\\}/gi, callData.appointmentAddr || '')\n  .replace(/\\{\\{adres\\}\\}/gi, callData.appointmentAddr || '')\n  .replace(/\\{\\{randevu_bolumu\\}\\}/gi, randevuBolumu)\n  .replace(/\\{\\{konusma_id\\}\\}/gi, callData.conversationId || '');\n\nreturn [{\n  json: {\n    ...callData,\n    messageText\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0010-0010-0010-000000000010",
+      "name": "Şablonu İşle",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://evoapi.lueratech.com/message/sendText/wms",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "yaCLHuAqSTS4CwUadOBhD23SYca2ZhF1"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.whatsappNumber }}\",\n  \"text\": {{ JSON.stringify($json.messageText) }}\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "WhatsApp Mesaj Gönder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 160]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-loc",
+              "leftValue": "={{ $('Şablonu İşle').first().json.hasLocation }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0006-0006-0006-000000000006",
+      "name": "Konum var mı?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://evoapi.lueratech.com/message/sendLocation/wms",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "yaCLHuAqSTS4CwUadOBhD23SYca2ZhF1"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Şablonu İşle').first().json.whatsappNumber }}\",\n  \"locationMessage\": {\n    \"name\": \"{{ $('Şablonu İşle').first().json.appointmentAddr }}\",\n    \"address\": \"{{ $('Şablonu İşle').first().json.appointmentAddr }}\",\n    \"latitude\": {{ $('Şablonu İşle').first().json.appointmentLat }},\n    \"longitude\": {{ $('Şablonu İşle').first().json.appointmentLng }}\n  }\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-0005-0005-000000000005",
+      "name": "Konum Gönder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 380]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\", \"conversation_id\": \"{{ $('Veriyi İşle').first().json.conversationId }}\" }",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0007-0007-0007-000000000007",
+      "name": "Webhook Yanıtla",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1680, 270]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"status\": \"skipped\", \"reason\": \"no phone number\" }",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0008-0008-0008-000000000008",
+      "name": "Telefon Yok — Atla",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [960, 520]
+    }
+  ],
+  "connections": {
+    "ElevenLabs Webhook": {
+      "main": [
+        [{ "node": "Veriyi İşle", "type": "main", "index": 0 }]
+      ]
+    },
+    "Veriyi İşle": {
+      "main": [
+        [{ "node": "Telefon var mı?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Telefon var mı?": {
+      "main": [
+        [
+          { "node": "Supabase: Aktif Şablonu Al", "type": "main", "index": 0 },
+          { "node": "Konum var mı?", "type": "main", "index": 0 }
+        ],
+        [{ "node": "Telefon Yok — Atla", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase: Aktif Şablonu Al": {
+      "main": [
+        [{ "node": "Şablonu İşle", "type": "main", "index": 0 }]
+      ]
+    },
+    "Şablonu İşle": {
+      "main": [
+        [{ "node": "WhatsApp Mesaj Gönder", "type": "main", "index": 0 }]
+      ]
+    },
+    "WhatsApp Mesaj Gönder": {
+      "main": [
+        [{ "node": "Webhook Yanıtla", "type": "main", "index": 0 }]
+      ]
+    },
+    "Konum var mı?": {
+      "main": [
+        [{ "node": "Konum Gönder", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Konum Gönder": {
+      "main": [
+        [{ "node": "Webhook Yanıtla", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["callflow", "whatsapp", "elevenlabs"]
+}
