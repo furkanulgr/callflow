@@ -562,37 +562,6 @@ export const ResultsPage = () => {
                                 </div>
                             )}
 
-                            {/* Data Collection Results */}
-                            {selected.dataResults && selected.dataResults.length > 0 && (
-                                <div>
-                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1 flex items-center gap-2">
-                                        <Database className="w-3.5 h-3.5" /> Toplanan Veri <div className="h-px bg-slate-100 flex-1" />
-                                    </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {selected.dataResults.map(r => {
-                                            const LABELS: Record<string, string> = {
-                                                customer_name:       "Müşteri Adı",
-                                                appointment_date:    "Randevu Tarihi",
-                                                appointment_time:    "Randevu Saati",
-                                                appointment_address: "Adres",
-                                                appointment_lat:     "Enlem",
-                                                appointment_lng:     "Boylam",
-                                            };
-                                            const label = LABELS[r.name.toLowerCase()] || r.name.replace(/_/g, " ");
-                                            return (
-                                                <div key={r.name} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
-                                                    <p className="text-sm font-bold text-slate-800 mt-1 break-words">
-                                                        {r.value === null || r.value === undefined || r.value === ""
-                                                            ? <span className="text-slate-400 font-normal italic">—</span>
-                                                            : String(r.value)}
-                                                    </p>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
 
                             {/* Transcript */}
                             <div>
