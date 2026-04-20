@@ -232,6 +232,35 @@
       "name": "Supabase: Randevu Kaydet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "position": [1680, 420]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-appt",
+              "leftValue": "={{ $('Veriyi İşle').first().json.hasAppointment }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0012-0012-0012-000000000012",
+      "name": "Randevu var mı?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [1440, 380]
     }
   ],
@@ -269,8 +298,14 @@
       "main": [
         [
           { "node": "Webhook Yanıtla", "type": "main", "index": 0 },
-          { "node": "Supabase: Randevu Kaydet", "type": "main", "index": 0 }
+          { "node": "Randevu var mı?", "type": "main", "index": 0 }
         ]
+      ]
+    },
+    "Randevu var mı?": {
+      "main": [
+        [{ "node": "Supabase: Randevu Kaydet", "type": "main", "index": 0 }],
+        []
       ]
     },
     "Konum var mı?": {
