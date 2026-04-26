@@ -9,6 +9,7 @@
 
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { createHmac } from 'crypto';
 import { config } from '../config';
 
 export const webhooksRouter = Router();
@@ -47,8 +48,33 @@ interface ElevenLabsWebhookPayload {
   };
 }
 
+// ─── HMAC signature doğrulama ─────────────────────────────────────────────────
+function verifyElevenLabsSignature(req: Request): boolean {
+  const secret = process.env.ELEVENLABS_WEBHOOK_SECRET;
+  if (!secret) return true; // secret yoksa geç (geliştirme)
+
+  const signature = req.headers['elevenlabs-signature'] as string;
+  if (!signature) return false;
+
+  // ElevenLabs imza formatı: t=timestamp,v0=hash
+  const parts = Object.fromEntries(signature.split(',').map(p => p.split('=')));
+  const timestamp = parts['t'];
+  const hash = parts['v0'];
+  if (!timestamp || !hash) return false;
+
+  const payload = `${timestamp}.${JSON.stringify(req.body)}`;
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
+  return expected === hash;
+}
+
 // ─── POST /api/webhooks/elevenlabs ───────────────────────────────────────────
 webhooksRouter.post('/elevenlabs', async (req: Request, res: Response): Promise<void> => {
+  // Signature doğrula
+  if (!verifyElevenLabsSignature(req)) {
+    res.sendStatus(401);
+    return;
+  }
+
   // ElevenLabs 200 almazsa retry atar — hemen 200 döndür
   res.sendStatus(200);
 
