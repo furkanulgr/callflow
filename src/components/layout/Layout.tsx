@@ -20,10 +20,36 @@ const navItems = [
 ];
 
 /* ══════════════════════════════════════════════════════════════ */
+const getLeadflowSettings = () => {
+    try {
+        const raw = localStorage.getItem("callflow_settings");
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            return {
+                enabled: parsed.leadflowEnabled !== false,
+                url: parsed.leadflowUrl || "https://leadflow.lueratech.com",
+            };
+        }
+    } catch {}
+    return { enabled: true, url: "https://leadflow.lueratech.com" };
+};
+
 export const Layout = () => {
     const [collapsed, setCollapsed]   = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [leadflow, setLeadflow]     = useState(getLeadflowSettings);
     const location = useLocation();
+
+    useEffect(() => {
+        const onStorage = () => setLeadflow(getLeadflowSettings());
+        window.addEventListener("storage", onStorage);
+        // Aynı sekme için custom event dinle
+        window.addEventListener("callflow_settings_updated", onStorage);
+        return () => {
+            window.removeEventListener("storage", onStorage);
+            window.removeEventListener("callflow_settings_updated", onStorage);
+        };
+    }, []);
 
     useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
@@ -139,26 +165,28 @@ export const Layout = () => {
                 <div className="absolute bottom-0 w-full p-4 border-t border-gray-100 bg-white/50">
 
                     {/* LeadFlow Button */}
-                    <a
-                        href="http://localhost:5174"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn(
-                            "flex items-center gap-2 mb-3 px-2 py-1.5 rounded-xl",
-                            "hover:bg-gray-100 transition-all duration-200 group",
-                            collapsed && !mobileOpen ? "justify-center" : ""
-                        )}
-                    >
-                        <div className={cn("flex items-baseline gap-2 flex-1", collapsed && !mobileOpen && "flex-none")}>
-                            <span className="text-2xl font-bold text-gray-900">LUERA</span>
-                            {(!collapsed || mobileOpen) && (
-                                <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600 transition-colors">LeadFlow</span>
+                    {leadflow.enabled && (
+                        <a
+                            href={leadflow.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                                "flex items-center gap-2 mb-3 px-3 py-2 rounded-xl",
+                                "bg-gray-100 hover:bg-gray-200 transition-all duration-200 group",
+                                collapsed && !mobileOpen ? "justify-center" : ""
                             )}
-                        </div>
-                        {(!collapsed || mobileOpen) && (
-                            <ArrowUpRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
-                        )}
-                    </a>
+                        >
+                            <div className={cn("flex items-baseline gap-2 flex-1", collapsed && !mobileOpen && "flex-none")}>
+                                <span className="text-2xl font-bold text-gray-900">LUERA</span>
+                                {(!collapsed || mobileOpen) && (
+                                    <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600 transition-colors">LeadFlow</span>
+                                )}
+                            </div>
+                            {(!collapsed || mobileOpen) && (
+                                <ArrowUpRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
+                            )}
+                        </a>
+                    )}
 
                     <div className={cn(
                         "flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer",
