@@ -4,9 +4,10 @@ import {
     Sparkles, Clock, X, Flame, Snowflake, CalendarCheck,
     Loader2, RefreshCw, CheckCircle2, XCircle, HelpCircle,
     Database, Target, MessageSquare, Calendar, BrainCircuit,
+    Users, List,
 } from "lucide-react";
 import { cn, formatDuration, getTimeAgo } from "@/utils/cn";
-import { getConversations, getConversationDetails, getAgents, AgentListItem } from "@/services/elevenlabsApi";
+import { getConversations, getConversationDetails, getAgents, AgentListItem, makeOutboundCall } from "@/services/elevenlabsApi";
 
 type Tag = "hot" | "cold" | "appointment" | "missed" | "unknown";
 type FilterType = "all" | Tag;
@@ -169,6 +170,38 @@ const extractAnalysis = (detail: any): {
     };
 };
 
+/* ───── Custom Checkbox ───── */
+const Checkbox = ({
+    checked,
+    onChange,
+    onClick,
+    indeterminate = false,
+}: {
+    checked: boolean;
+    onChange: () => void;
+    onClick?: (e: React.MouseEvent) => void;
+    indeterminate?: boolean;
+}) => (
+    <button
+        type="button"
+        onClick={(e) => { onClick?.(e); onChange(); }}
+        className={cn(
+            "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150 border-2",
+            checked || indeterminate
+                ? "bg-slate-900 border-slate-900 shadow-sm"
+                : "bg-white border-slate-300 hover:border-slate-500"
+        )}
+    >
+        {indeterminate && !checked ? (
+            <span className="w-2 h-0.5 bg-[#CCFF00] rounded-full" />
+        ) : checked ? (
+            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                <path d="M1 4L4 7.5L10 1" stroke="#CCFF00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+        ) : null}
+    </button>
+);
+
 /* ───── UI PARTS ───── */
 const TagBadge = ({ tag }: { tag: Tag }) => {
     if (tag === "hot") return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-orange-50 text-orange-600 border border-orange-100"><Flame className="w-3 h-3" />Başarılı</span>;
@@ -197,6 +230,10 @@ export const ResultsPage = () => {
     const [selected, setSelected] = useState<CallItem | null>(null);
     const [detailTranscript, setDetailTranscript] = useState<TranscriptMsg[]>([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
+    const [viewMode, setViewMode] = useState<"calls" | "contacts">("calls");
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [retrying, setRetrying] = useState(false);
+    const [retryResults, setRetryResults] = useState<{ success: number; fail: number } | null>(null);
 
     const fetchCalls = async () => {
         setIsLoading(true);
@@ -311,6 +348,53 @@ export const ResultsPage = () => {
         return true;
     }), [scoped, filter, search]);
 
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filtered.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filtered.map(c => c.id)));
+        }
+    };
+
+    const handleRetry = async () => {
+        const toCall = filtered.filter(c => selectedIds.has(c.id) && c.phone && c.phone !== "–");
+        if (toCall.length === 0) return;
+        setRetrying(true);
+        setRetryResults(null);
+        let success = 0, fail = 0;
+        for (const call of toCall) {
+            try {
+                await makeOutboundCall(call.agentId || "", call.phone);
+                success++;
+            } catch {
+                fail++;
+            }
+        }
+        setRetrying(false);
+        setRetryResults({ success, fail });
+        setSelectedIds(new Set());
+        setTimeout(() => setRetryResults(null), 4000);
+    };
+
+    // Contacts view: group filtered calls by phone number
+    const contacts = useMemo(() => {
+        const map = new Map<string, { phone: string; name: string; calls: CallItem[] }>();
+        filtered.forEach(c => {
+            const key = c.phone || c.id;
+            if (!map.has(key)) map.set(key, { phone: c.phone, name: c.name, calls: [] });
+            map.get(key)!.calls.push(c);
+        });
+        return Array.from(map.values()).sort((a, b) => b.calls.length - a.calls.length);
+    }, [filtered]);
+
     const dateRanges: { id: DateRange; label: string }[] = [
         { id: "all", label: "Tümü" },
         { id: "today", label: "Bugün" },
@@ -339,14 +423,40 @@ export const ResultsPage = () => {
                         </h1>
                         <p className="text-sm text-slate-500 mt-1">Tüm aramaların AI analizlerini, değerlendirme kriterlerini ve toplanan verileri görüntüleyin</p>
                     </div>
-                    <button
-                        onClick={fetchCalls}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
-                    >
-                        <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
-                        Yenile
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* View Toggle */}
+                        <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                            <button
+                                onClick={() => setViewMode("calls")}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                    viewMode === "calls" ? "bg-slate-900 text-[#CCFF00]" : "text-slate-500 hover:text-slate-800"
+                                )}
+                            >
+                                <List className="w-3.5 h-3.5" /> Aramalar
+                            </button>
+                            <button
+                                onClick={() => setViewMode("contacts")}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                    viewMode === "contacts" ? "bg-slate-900 text-[#CCFF00]" : "text-slate-500 hover:text-slate-800"
+                                )}
+                            >
+                                <Users className="w-3.5 h-3.5" /> Kişiler
+                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-bold">
+                                    {contacts.length}
+                                </span>
+                            </button>
+                        </div>
+                        <button
+                            onClick={fetchCalls}
+                            disabled={isLoading}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+                        >
+                            <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+                            Yenile
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary Row */}
@@ -432,12 +542,79 @@ export const ResultsPage = () => {
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_5px_20px_rgba(0,0,0,0.02)] overflow-hidden">
+                {/* Contacts View */}
+                {viewMode === "contacts" && (
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50/50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                            <div className="col-span-4">KİŞİ / NUMARA</div>
+                            <div className="col-span-2">TOPLAM ARAMA</div>
+                            <div className="col-span-2">SON SONUÇ</div>
+                            <div className="col-span-2">SON ARAMA</div>
+                            <div className="col-span-2 text-right">TOPLAM SÜRE</div>
+                        </div>
+                        <div className="divide-y divide-slate-50">
+                            {isLoading ? (
+                                <div className="flex items-center justify-center py-16">
+                                    <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                                </div>
+                            ) : contacts.length === 0 ? (
+                                <div className="text-center py-16 text-sm text-slate-400">Hiç kişi bulunamadı.</div>
+                            ) : contacts.map(contact => {
+                                const lastCall = contact.calls[0];
+                                const totalDuration = contact.calls.reduce((s, c) => s + c.duration, 0);
+                                const initial = (contact.name && contact.name !== "–" ? contact.name : contact.phone)[0]?.toUpperCase() || "?";
+                                return (
+                                    <div key={contact.phone}
+                                        onClick={() => setSelected(lastCall)}
+                                        className="grid grid-cols-12 gap-4 items-center px-6 py-4 hover:bg-slate-50/80 cursor-pointer transition-all group">
+                                        <div className="col-span-4 flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center font-bold text-[#CCFF00] text-sm flex-shrink-0">
+                                                {initial}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-slate-800 truncate">
+                                                    {contact.name !== "–" && contact.name !== contact.phone ? contact.name : contact.phone}
+                                                </p>
+                                                <p className="text-[11px] text-slate-400 font-mono mt-0.5">{contact.phone}</p>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <span className="flex items-center gap-1.5 text-sm font-bold text-slate-700">
+                                                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                {contact.calls.length}x
+                                            </span>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <TagBadge tag={lastCall.tag} />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-xs font-medium text-slate-500">{getTimeAgo(lastCall.time)}</p>
+                                        </div>
+                                        <div className="col-span-2 text-right">
+                                            <p className="text-sm font-bold text-slate-700">
+                                                {totalDuration > 0 ? formatDuration(totalDuration) : "–"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Calls Table */}
+                {viewMode === "calls" && <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_5px_20px_rgba(0,0,0,0.02)] overflow-hidden">
                     <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50/50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        <div className="col-span-1 flex items-center">
+                            <Checkbox
+                                checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                                indeterminate={selectedIds.size > 0 && selectedIds.size < filtered.length}
+                                onChange={toggleSelectAll}
+                            />
+                        </div>
                         <div className="col-span-3">KİŞİ / NUMARA</div>
                         <div className="col-span-2">DURUM</div>
-                        <div className="col-span-5">AI ÖZETİ</div>
+                        <div className="col-span-4">AI ÖZETİ</div>
                         <div className="col-span-2 text-right">SÜRE</div>
                     </div>
 
@@ -452,10 +629,20 @@ export const ResultsPage = () => {
                             <div className="text-center py-16 text-sm text-slate-400">Hiç kayıt bulunamadı.</div>
                         ) : filtered.map(r => (
                             <div key={r.id}
-                                onClick={() => setSelected(r)}
-                                className="grid grid-cols-12 gap-4 items-center px-6 py-4 hover:bg-slate-50/80 cursor-pointer transition-all group">
+                                className={cn(
+                                    "grid grid-cols-12 gap-4 items-center px-6 py-4 transition-all group",
+                                    selectedIds.has(r.id) ? "bg-slate-50" : "hover:bg-slate-50/80"
+                                )}>
 
-                                <div className="col-span-3 flex items-center gap-3">
+                                <div className="col-span-1 flex items-center">
+                                    <Checkbox
+                                        checked={selectedIds.has(r.id)}
+                                        onChange={() => toggleSelect(r.id)}
+                                        onClick={e => e.stopPropagation()}
+                                    />
+                                </div>
+
+                                <div className="col-span-3 flex items-center gap-3 cursor-pointer" onClick={() => setSelected(r)}>
                                     {r.tag === "missed" ? (
                                         <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0"><PhoneMissed className="w-4 h-4 text-red-500" /></div>
                                     ) : r.type === "incoming" ? (
@@ -477,11 +664,11 @@ export const ResultsPage = () => {
                                     </div>
                                 </div>
 
-                                <div className="col-span-2">
+                                <div className="col-span-2 cursor-pointer" onClick={() => setSelected(r)}>
                                     <TagBadge tag={r.tag} />
                                 </div>
 
-                                <div className="col-span-5">
+                                <div className="col-span-4 cursor-pointer" onClick={() => setSelected(r)}>
                                     <div className="flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 w-full group-hover:bg-white group-hover:border-emerald-100 transition-colors">
                                         <Sparkles className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
                                         <p className="text-[11px] font-medium text-slate-600 line-clamp-2 leading-snug">
@@ -490,15 +677,57 @@ export const ResultsPage = () => {
                                     </div>
                                 </div>
 
-                                <div className="col-span-2 text-right">
+                                <div className="col-span-2 text-right cursor-pointer" onClick={() => setSelected(r)}>
                                     <p className="text-sm font-bold text-slate-700 tabular-nums">{r.duration > 0 ? formatDuration(r.duration) : "–"}</p>
                                     <p className="text-[10px] text-slate-400 font-medium mt-0.5">{getTimeAgo(r.time)}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                </div>}
             </div>
+
+            {/* Floating Retry Bar */}
+            {selectedIds.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 duration-200">
+                    <div className="flex items-center gap-4 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl shadow-slate-900/40 border border-slate-700">
+                        <span className="text-sm font-bold">
+                            <span className="text-[#CCFF00]">{selectedIds.size}</span> kişi seçildi
+                        </span>
+                        <div className="w-px h-5 bg-slate-700" />
+                        <button
+                            onClick={handleRetry}
+                            disabled={retrying}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#CCFF00] text-slate-900 rounded-xl text-sm font-black hover:brightness-110 transition-all disabled:opacity-60 active:scale-95"
+                        >
+                            {retrying ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Aranıyor...</>
+                            ) : (
+                                <><Phone className="w-4 h-4" /> Seçilenleri Ara</>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setSelectedIds(new Set())}
+                            className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Retry Result Toast */}
+            {retryResults && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 duration-200">
+                    <div className="flex items-center gap-3 bg-white border border-slate-200 px-5 py-3 rounded-2xl shadow-xl">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        <span className="text-sm font-bold text-slate-800">
+                            {retryResults.success} arama başlatıldı
+                            {retryResults.fail > 0 && <span className="text-red-500 ml-1">· {retryResults.fail} başarısız</span>}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* Detail Modal */}
             {selected && (

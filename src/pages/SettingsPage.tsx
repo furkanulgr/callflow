@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import {
     Sparkles, Phone, Bell, Clock, User, Save,
-    Volume2, Globe, Shield, ChevronRight, Building, CheckCircle2
+    Volume2, Globe, Shield, ChevronRight, Building, CheckCircle2,
+    Zap, Puzzle, Copy, RefreshCw, Loader2, Trash2, ArrowUpRight, Key,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import {
+    getLeadflowKey, generateLeadflowKey, revokeLeadflowKey,
+    LeadflowConnection,
+} from "@/services/leadflowApi";
 
 const STORAGE_KEY = "callflow_settings";
 
@@ -22,6 +27,8 @@ interface SettingsState {
     workDays: number[];
     dailyMax: number;
     callDelay: number;
+    leadflowEnabled: boolean;
+    leadflowUrl: string;
 }
 
 const DEFAULTS: SettingsState = {
@@ -39,6 +46,8 @@ const DEFAULTS: SettingsState = {
     workDays: [0, 1, 2, 3, 4],
     dailyMax: 100,
     callDelay: 30,
+    leadflowEnabled: true,
+    leadflowUrl: "https://leadflow.lueratech.com",
 };
 
 function loadSettings(): SettingsState {
@@ -49,7 +58,7 @@ function loadSettings(): SettingsState {
     return DEFAULTS;
 }
 
-type Section = "ai" | "calls" | "notifications" | "hours" | "account";
+type Section = "ai" | "calls" | "notifications" | "hours" | "account" | "integrations";
 
 const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) => (
     <button onClick={() => onChange(!enabled)}
@@ -65,6 +74,60 @@ export const SettingsPage = () => {
     const [saved, setSaved] = useState(false);
     const [s, setS] = useState<SettingsState>(loadSettings);
 
+    // LeadFlow API Key state
+    const [lfKey, setLfKey]             = useState<LeadflowConnection | null>(null);
+    const [lfKeyLoading, setLfKeyLoading] = useState(false);
+    const [lfKeyCopied, setLfKeyCopied]   = useState(false);
+    const [lfKeyVisible, setLfKeyVisible] = useState(false);
+    const [lfGenerating, setLfGenerating] = useState(false);
+    const [lfRevoking, setLfRevoking]     = useState(false);
+    const [lfKeyError, setLfKeyError]     = useState<string | null>(null);
+
+    useEffect(() => {
+        if (section === "integrations") {
+            setLfKeyLoading(true);
+            getLeadflowKey()
+                .then(key => setLfKey(key))
+                .catch(() => setLfKeyError("Key bilgisi alınamadı"))
+                .finally(() => setLfKeyLoading(false));
+        }
+    }, [section]);
+
+    const handleGenerateKey = async () => {
+        setLfGenerating(true);
+        setLfKeyError(null);
+        try {
+            const key = await generateLeadflowKey();
+            setLfKey(key);
+            setLfKeyVisible(true);
+        } catch {
+            setLfKeyError("Key oluşturulamadı. Supabase bağlantısını kontrol et.");
+        } finally {
+            setLfGenerating(false);
+        }
+    };
+
+    const handleRevokeKey = async () => {
+        if (!confirm("Bu API key'i iptal etmek istediğinizden emin misiniz? LeadFlow bağlantısı kesilir.")) return;
+        setLfRevoking(true);
+        try {
+            await revokeLeadflowKey();
+            setLfKey(null);
+            setLfKeyVisible(false);
+        } catch {
+            setLfKeyError("Key iptal edilemedi.");
+        } finally {
+            setLfRevoking(false);
+        }
+    };
+
+    const handleCopyKey = () => {
+        if (!lfKey?.api_key) return;
+        navigator.clipboard.writeText(lfKey.api_key);
+        setLfKeyCopied(true);
+        setTimeout(() => setLfKeyCopied(false), 2000);
+    };
+
     const set = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) =>
         setS(prev => ({ ...prev, [key]: value }));
 
@@ -78,6 +141,7 @@ export const SettingsPage = () => {
 
     const handleSave = () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+        window.dispatchEvent(new Event("callflow_settings_updated"));
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
     };
@@ -91,6 +155,7 @@ export const SettingsPage = () => {
         { id: "calls", label: "Çağrı Ayarları", Icon: Phone },
         { id: "notifications", label: "Bildirimler", Icon: Bell },
         { id: "hours", label: "Çalışma Saatleri", Icon: Clock },
+        { id: "integrations", label: "Entegrasyonlar", Icon: Puzzle },
         { id: "account", label: "Hesap", Icon: User },
     ];
 
@@ -261,6 +326,163 @@ export const SettingsPage = () => {
                                                 </button>
                                             ))}
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Integrations */}
+                            {section === "integrations" && (
+                                <div className="space-y-6">
+                                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                        <Puzzle className="w-5 h-5 text-gray-500" /> Entegrasyonlar
+                                    </h2>
+
+                                    {/* LeadFlow Card */}
+                                    <div className={cn(
+                                        "rounded-2xl border-2 p-5 transition-all",
+                                        s.leadflowEnabled
+                                            ? "border-[#CCFF00]/50 bg-[#CCFF00]/5"
+                                            : "border-gray-200 bg-gray-50"
+                                    )}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                                                    s.leadflowEnabled ? "bg-slate-900" : "bg-gray-200"
+                                                )}>
+                                                    <Zap className={cn("w-5 h-5", s.leadflowEnabled ? "text-[#CCFF00]" : "text-gray-400")} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900">LUERA LeadFlow</p>
+                                                    <p className="text-xs text-gray-500">Google Maps lead bulma motoru</p>
+                                                </div>
+                                            </div>
+                                            <Toggle enabled={s.leadflowEnabled} onChange={v => set("leadflowEnabled", v)} />
+                                        </div>
+
+                                        {s.leadflowEnabled && (
+                                            <div>
+                                                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">LeadFlow URL</label>
+                                                <input
+                                                    type="text"
+                                                    value={s.leadflowUrl}
+                                                    onChange={e => set("leadflowUrl", e.target.value)}
+                                                    className="input-base text-sm font-mono"
+                                                    placeholder="https://leadflow.lueratech.com"
+                                                />
+                                                <p className="text-xs text-gray-400 mt-1.5">
+                                                    Aktif olduğunda sidebar'da LeadFlow butonu görünür
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {!s.leadflowEnabled && (
+                                            <p className="text-xs text-gray-400">
+                                                Pasif — LeadFlow butonu sidebar'da gizlenir
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* LeadFlow API Key Card */}
+                                    <div className="rounded-2xl border-2 border-slate-200 bg-white p-5">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+                                                <Key className="w-5 h-5 text-[#CCFF00]" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900">LeadFlow Bağlantı Anahtarı</p>
+                                                <p className="text-xs text-gray-500">Bu key'i LeadFlow ayarlarına girerek lead aktarımını etkinleştir</p>
+                                            </div>
+                                        </div>
+
+                                        {lfKeyLoading ? (
+                                            <div className="flex items-center justify-center py-6">
+                                                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                                            </div>
+                                        ) : lfKey ? (
+                                            <div className="space-y-3">
+                                                {/* Key göster / gizle */}
+                                                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                                    <code className="flex-1 text-xs font-mono text-slate-700 truncate select-all">
+                                                        {lfKeyVisible ? lfKey.api_key : `${lfKey.api_key.slice(0, 8)}${'•'.repeat(24)}${lfKey.api_key.slice(-4)}`}
+                                                    </code>
+                                                    <button
+                                                        onClick={() => setLfKeyVisible(v => !v)}
+                                                        className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-200 transition-colors flex-shrink-0"
+                                                    >
+                                                        {lfKeyVisible ? "Gizle" : "Göster"}
+                                                    </button>
+                                                </div>
+
+                                                {/* Aksiyon butonları */}
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={handleCopyKey}
+                                                        className={cn(
+                                                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
+                                                            lfKeyCopied
+                                                                ? "bg-emerald-500 text-white"
+                                                                : "bg-slate-900 text-[#CCFF00] hover:bg-slate-700"
+                                                        )}
+                                                    >
+                                                        {lfKeyCopied ? <><CheckCircle2 className="w-4 h-4" /> Kopyalandı</> : <><Copy className="w-4 h-4" /> Kopyala</>}
+                                                    </button>
+                                                    <button
+                                                        onClick={handleGenerateKey}
+                                                        disabled={lfGenerating}
+                                                        title="Yeni key üret (eskisi geçersiz olur)"
+                                                        className="px-3 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors disabled:opacity-50"
+                                                    >
+                                                        <RefreshCw className={cn("w-4 h-4", lfGenerating && "animate-spin")} />
+                                                    </button>
+                                                    <button
+                                                        onClick={handleRevokeKey}
+                                                        disabled={lfRevoking}
+                                                        title="Key'i iptal et"
+                                                        className="px-3 py-2.5 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+
+                                                {/* Kullanım bilgisi */}
+                                                <div className="text-[11px] text-slate-400 space-y-1 pt-1">
+                                                    <p>Oluşturulma: {new Date(lfKey.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</p>
+                                                    {lfKey.last_used_at && <p>Son kullanım: {new Date(lfKey.last_used_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}</p>}
+                                                </div>
+
+                                                {/* LeadFlow'da nasıl kullanılır */}
+                                                <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                    <p className="text-[11px] font-bold text-slate-600 mb-1">LeadFlow'da nasıl kullanılır?</p>
+                                                    <p className="text-[11px] text-slate-500">LeadFlow → Ayarlar → CallFlow Entegrasyonu → Bu key'i gir</p>
+                                                    <div className="flex items-center gap-1.5 mt-2">
+                                                        <code className="text-[10px] bg-white border border-slate-200 rounded px-2 py-1 font-mono text-slate-600 flex-1 truncate">
+                                                            {import.meta.env['VITE_BRIDGE_SERVER_URL'] ?? 'http://localhost:3001'}/api/leadflow/receive
+                                                        </code>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                <p className="text-sm text-slate-500 text-center py-2">
+                                                    Henüz bir API key oluşturulmamış.
+                                                </p>
+                                                <button
+                                                    onClick={handleGenerateKey}
+                                                    disabled={lfGenerating}
+                                                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-[#CCFF00] font-bold text-sm hover:bg-slate-700 transition-colors disabled:opacity-50"
+                                                >
+                                                    {lfGenerating
+                                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Oluşturuluyor...</>
+                                                        : <><Key className="w-4 h-4" /> API Key Oluştur</>
+                                                    }
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {lfKeyError && (
+                                            <p className="mt-3 text-xs text-red-500 font-medium">{lfKeyError}</p>
+                                        )}
                                     </div>
                                 </div>
                             )}

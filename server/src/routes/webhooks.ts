@@ -1,155 +1,170 @@
 /**
  * ElevenLabs Post-Call Webhook Handler
  *
- * ElevenLabs çağrı bittiğinde bu endpoint'i çağırır.
- * Transcript, süre, conversation ID → Supabase'e kaydeder.
- * Ardından n8n / CRM webhook'unu tetikler.
+ * ElevenLabs her arama bittiğinde bu endpoint'i çağırır.
+ * Kampanya istatistiklerini (called, answered) Supabase'de günceller.
  *
- * POST /webhooks/elevenlabs
+ * POST /api/webhooks/elevenlabs
  */
 
 import { Router, Request, Response } from 'express';
-import { config } from '../config';
-import { finalizeCall, logWebhook } from '../services/supabase';
-import { elevenlabsApi } from '../services/elevenlabs';
 import { createClient } from '@supabase/supabase-js';
+import { config } from '../config';
 
 export const webhooksRouter = Router();
 
-const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+const supabase = createClient(
+  config.supabase.url,
+  config.supabase.serviceRoleKey
+);
 
+// ─── ElevenLabs Webhook Payload ───────────────────────────────────────────────
 interface ElevenLabsWebhookPayload {
-  type:            string;  // 'conversation.ended' | 'conversation.initiated' vb.
-  event_timestamp: number;
+  type: string; // 'post_call_webhook' | 'conversation.ended' | ...
+  event_timestamp?: number;
   data: {
     conversation_id:      string;
     agent_id:             string;
-    status:               string;
-    call_duration_secs:   number;
-    start_time_unix_secs: number;
-    transcript?:          Array<{
-      role:                 'agent' | 'user';
-      message:              string;
-      time_in_call_secs:    number;
+    status:               string;   // 'completed' | 'failed' | ...
+    call_duration_secs?:  number;
+    start_time_unix_secs?: number;
+    transcript?: Array<{
+      role:              'agent' | 'user';
+      message:           string;
+      time_in_call_secs: number;
     }>;
-    metadata?: Record<string, unknown>;
+    analysis?: {
+      evaluation_criteria_results?: Record<string, any>;
+      data_collection_results?:     Record<string, any>;
+      call_successful?:             string; // 'success' | 'failure' | 'unknown'
+    };
+    metadata?: Record<string, any>;
+    call?: {
+      phone_number_id?: string;
+      to?:              string;
+      direction?:       string;
+    };
   };
 }
 
-// ─── POST /webhooks/elevenlabs ────────────────────────────────────────────────
+// ─── POST /api/webhooks/elevenlabs ───────────────────────────────────────────
 webhooksRouter.post('/elevenlabs', async (req: Request, res: Response): Promise<void> => {
+  // ElevenLabs 200 almazsa retry atar — hemen 200 döndür
+  res.sendStatus(200);
+
   const payload = req.body as ElevenLabsWebhookPayload;
+  const eventType = payload.type || 'unknown';
 
-  console.log(`[Webhook] ElevenLabs event: ${payload.type} | convId: ${payload.data?.conversation_id}`);
+  console.log(`[Webhook] ElevenLabs | type: ${eventType} | conv: ${payload.data?.conversation_id}`);
 
-  // Sadece conversation.ended event'ini işle
-  if (payload.type !== 'conversation.ended') {
-    res.sendStatus(200);
-    return;
-  }
+  // Sadece konuşma biten eventleri işle
+  const isCallEnd = [
+    'post_call_webhook',
+    'conversation.ended',
+    'conversation.completed',
+  ].includes(eventType);
 
-  const { conversation_id, agent_id, call_duration_secs, transcript } = payload.data;
+  if (!isCallEnd || !payload.data) return;
+
+  const {
+    conversation_id,
+    agent_id,
+    status,
+    call_duration_secs = 0,
+    analysis,
+    metadata,
+    call,
+  } = payload.data;
+
+  const wasAnswered = call_duration_secs > 0 && status !== 'failed';
 
   try {
-    // DB'de bu conversation_id'ye sahip çağrıyı bul
-    const { data: callRecord } = await supabase
-      .from('calls')
-      .select('id, organization_id, campaign_id')
-      .eq('elevenlabs_conv_id', conversation_id)
-      .single();
+    // 1. Agent'a bağlı aktif/son kampanyayı bul
+    //    batch_id metadata'da gelebilir — varsa önce ona bak
+    const batchId: string | undefined =
+      metadata?.batch_id ||
+      metadata?.batch_call_id ||
+      call?.phone_number_id; // fallback
 
-    if (!callRecord) {
-      // Conversation ID henüz DB'ye yazılmamış olabilir (race condition)
-      // ElevenLabs'dan tam conversation detayını çekip tekrar dene
-      console.warn(`[Webhook] DB'de conversation bulunamadı: ${conversation_id}`);
-      res.sendStatus(200);
+    let campaign: { id: string } | null = null;
+
+    if (batchId) {
+      const { data } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('batch_id', batchId)
+        .single();
+      campaign = data;
+    }
+
+    if (!campaign && agent_id) {
+      // batch_id yoksa → agent_id ile en son aktif kampanyayı al
+      const { data } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('agent_id', agent_id)
+        .in('status', ['active', 'running'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      campaign = data;
+    }
+
+    if (!campaign) {
+      console.warn(`[Webhook] Kampanya bulunamadı | agent: ${agent_id} | batch: ${batchId}`);
       return;
     }
 
-    // Transcript'i bizim formata çevir
-    const formattedTranscript = (transcript ?? []).map((t) => ({
-      role:      t.role,
-      text:      t.message,
-      timestamp: new Date(
-        (payload.data.start_time_unix_secs + t.time_in_call_secs) * 1000
-      ).toISOString(),
-    }));
-
-    // Çağrıyı DB'de tamamla
-    await finalizeCall(callRecord.id, {
-      status:           'completed',
-      durationSeconds:  Math.round(call_duration_secs),
-      transcript:       formattedTranscript,
-      elevenlabsConvId: conversation_id,
+    // 2. Kampanya sayaçlarını artır (atomic RPC — race condition yok)
+    const { error: rpcError } = await supabase.rpc('increment_campaign_stats', {
+      p_campaign_id: campaign.id,
+      p_called:      1,
+      p_answered:    wasAnswered ? 1 : 0,
     });
 
-    console.log(`[Webhook] Çağrı tamamlandı | callId: ${callRecord.id} | süre: ${call_duration_secs}s | transcript: ${formattedTranscript.length} mesaj`);
+    if (rpcError) {
+      // RPC yoksa direkt update ile fallback
+      const { data: current } = await supabase
+        .from('campaigns')
+        .select('called, answered')
+        .eq('id', campaign.id)
+        .single();
 
-    // n8n / CRM webhook tetikle
-    if (config.n8n.webhookUrl) {
-      await triggerN8nWebhook({
-        callId:         callRecord.id,
-        organizationId: callRecord.organization_id,
-        campaignId:     callRecord.campaign_id,
-        conversationId: conversation_id,
-        agentId:        agent_id,
-        durationSeconds: Math.round(call_duration_secs),
-        transcript:     formattedTranscript,
-      });
+      if (current) {
+        await supabase
+          .from('campaigns')
+          .update({
+            called:   (current.called   || 0) + 1,
+            answered: (current.answered || 0) + (wasAnswered ? 1 : 0),
+          })
+          .eq('id', campaign.id);
+      }
     }
 
-    res.sendStatus(200);
+    // 3. Konuşmayı conversations tablosuna kaydet (opsiyonel)
+    const phoneNumber = call?.to || metadata?.to || null;
+    await supabase.from('campaign_calls').upsert({
+      campaign_id:     campaign.id,
+      conversation_id,
+      agent_id,
+      phone_number:    phoneNumber,
+      status:          wasAnswered ? 'answered' : 'missed',
+      duration_secs:   Math.round(call_duration_secs),
+      call_successful: analysis?.call_successful || 'unknown',
+      raw_analysis:    analysis || null,
+      occurred_at:     new Date().toISOString(),
+    }, { onConflict: 'conversation_id' });
+
+    console.log(
+      `[Webhook] ✅ Kampanya güncellendi | id: ${campaign.id} | yanıtladı: ${wasAnswered} | süre: ${call_duration_secs}s`
+    );
+
   } catch (err) {
-    console.error('[Webhook] İşleme hatası:', err);
-    res.sendStatus(500);
+    console.error('[Webhook] Hata:', err);
   }
 });
 
-// ─── n8n Webhook tetikleyici ──────────────────────────────────────────────────
-async function triggerN8nWebhook(data: {
-  callId:          string;
-  organizationId:  string;
-  campaignId?:     string;
-  conversationId:  string;
-  agentId:         string;
-  durationSeconds: number;
-  transcript:      Array<{ role: string; text: string; timestamp: string }>;
-}): Promise<void> {
-  if (!config.n8n.webhookUrl) return;
-
-  const payload = {
-    event:     'call.completed',
-    timestamp: new Date().toISOString(),
-    ...data,
-  };
-
-  let responseStatus: number | undefined;
-  let responseBody:   string | undefined;
-  let success = false;
-
-  try {
-    const response = await fetch(config.n8n.webhookUrl, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-      signal:  AbortSignal.timeout(10_000),
-    });
-    responseStatus = response.status;
-    responseBody   = await response.text();
-    success        = response.ok;
-    console.log(`[Webhook] n8n'e gönderildi | status: ${responseStatus}`);
-  } catch (err) {
-    console.error('[Webhook] n8n hatası:', err);
-  }
-
-  await logWebhook({
-    organizationId: data.organizationId,
-    callId:         data.callId,
-    campaignId:     data.campaignId,
-    url:            config.n8n.webhookUrl,
-    requestBody:    payload,
-    responseStatus,
-    responseBody,
-    success,
-  }).catch(console.error);
-}
+// ─── GET /api/webhooks/health ─────────────────────────────────────────────────
+webhooksRouter.get('/health', (_req: Request, res: Response) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
+});

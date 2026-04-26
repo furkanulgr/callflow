@@ -90,8 +90,10 @@ export interface TranscriptEntry {
 export interface OutboundCallRequest {
   toNumber: string;          // E.164: +905551234567
   agentId: string;           // Kendi DB'mizdeki agent UUID
+  phoneNumberId?: string;    // ElevenLabs phone number ID
   campaignId?: string;
   contactId?: string;
   organizationId: string;
   metadata?: Record<string, string>;
+  customVariables?: Record<string, string>;
 }

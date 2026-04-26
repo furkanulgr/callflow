@@ -10,6 +10,7 @@ import cors from 'cors';
 import { config } from './config';
 import { callsRouter } from './routes/calls';
 import { webhooksRouter } from './routes/webhooks';
+import { leadflowRouter } from './routes/leadflow';
 
 const app = express();
 
@@ -17,7 +18,9 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:5173',
+    'http://localhost:5174',
     'https://callflow.lueratech.com',
+    'https://leadflow.lueratech.com',
   ],
   credentials: true,
 }));
@@ -26,8 +29,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/calls',  callsRouter);
-app.use('/webhooks',   webhooksRouter);
+app.use('/api/calls',    callsRouter);
+app.use('/webhooks',     webhooksRouter);
+app.use('/api/leadflow', leadflowRouter);
 
 // Health check
 app.get('/health', (_req, res) => {
