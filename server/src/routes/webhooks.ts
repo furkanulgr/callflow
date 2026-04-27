@@ -54,17 +54,32 @@ function verifyElevenLabsSignature(req: Request): boolean {
   if (!secret) return true; // secret yoksa geç (geliştirme)
 
   const signature = req.headers['elevenlabs-signature'] as string;
-  if (!signature) return false;
+  if (!signature) {
+    console.warn('[Webhook] elevenlabs-signature header eksik');
+    return false;
+  }
 
   // ElevenLabs imza formatı: t=timestamp,v0=hash
   const parts = Object.fromEntries(signature.split(',').map(p => p.split('=')));
   const timestamp = parts['t'];
   const hash = parts['v0'];
-  if (!timestamp || !hash) return false;
+  if (!timestamp || !hash) {
+    console.warn('[Webhook] signature formatı geçersiz');
+    return false;
+  }
 
-  const payload = `${timestamp}.${JSON.stringify(req.body)}`;
+  // Raw body'yi kullan (re-stringify byte uyumsuzluğu yaratabilir)
+  const rawBody = (req as any).rawBody as string | undefined;
+  if (!rawBody) {
+    console.warn('[Webhook] rawBody yok — express.json verify ayarı eksik');
+    return false;
+  }
+
+  const payload = `${timestamp}.${rawBody}`;
   const expected = createHmac('sha256', secret).update(payload).digest('hex');
-  return expected === hash;
+  const ok = expected === hash;
+  if (!ok) console.warn('[Webhook] HMAC eşleşmedi');
+  return ok;
 }
 
 // ─── POST /api/webhooks/elevenlabs ───────────────────────────────────────────

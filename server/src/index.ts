@@ -25,7 +25,12 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+// Raw body'yi yakala — webhook HMAC doğrulaması için gerekli
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    (req as any).rawBody = buf.toString('utf8');
+  },
+}));
 app.use(express.urlencoded({ extended: false }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
