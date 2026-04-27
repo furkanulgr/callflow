@@ -1,17 +1,11 @@
 /**
- * LeadFlow Integration — Supabase Direct Client
+ * LeadFlow Integration — Supabase Direct Client (User-scoped)
  *
- * Key yönetimi ve lead listesi için bridge server'a gerek yok,
- * Supabase anon key ile direkt çalışır.
- *
- * Sadece LeadFlow'dan lead ALMAK için bridge server gerekli
- * (o endpoint LeadFlow tarafından çağrılır, frontend'den değil).
+ * Multi-tenant: Her kullanıcı sadece kendi key'ini ve lead'lerini görür.
+ * RLS politikaları sayesinde DB seviyesinde izolasyon var.
  */
 
 import { supabase } from "@/lib/supabase";
-
-// Şimdilik sabit org_id — auth eklenince session'dan gelir
-export const DEFAULT_ORG_ID = "lueratech";
 
 export interface LeadflowConnection {
     id: string;
@@ -34,14 +28,22 @@ export interface LeadflowContact {
     created_at: string;
 }
 
+/** Aktif kullanıcının ID'sini al */
+async function currentUserId(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Oturum açık değil");
+    return user.id;
+}
+
 /* ── Key Yönetimi ─────────────────────────────────────────── */
 
-/** Mevcut aktif API key'i getir */
-export async function getLeadflowKey(orgId = DEFAULT_ORG_ID): Promise<LeadflowConnection | null> {
+/** Mevcut aktif API key'i getir (sadece bu kullanıcının) */
+export async function getLeadflowKey(): Promise<LeadflowConnection | null> {
+    const userId = await currentUserId();
     const { data } = await supabase
         .from("leadflow_connections")
         .select("id, api_key, name, active, created_at, last_used_at")
-        .eq("organization_id", orgId)
+        .eq("user_id", userId)
         .eq("active", true)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -51,19 +53,21 @@ export async function getLeadflowKey(orgId = DEFAULT_ORG_ID): Promise<LeadflowCo
 }
 
 /** Yeni API key üret — eskiyi pasife al, yeni key aç */
-export async function generateLeadflowKey(orgId = DEFAULT_ORG_ID): Promise<LeadflowConnection> {
+export async function generateLeadflowKey(): Promise<LeadflowConnection> {
+    const userId = await currentUserId();
+
     // Mevcut aktif key'leri pasife al
     await supabase
         .from("leadflow_connections")
         .update({ active: false })
-        .eq("organization_id", orgId)
+        .eq("user_id", userId)
         .eq("active", true);
 
     // Yeni key oluştur
     const { data, error } = await supabase
         .from("leadflow_connections")
         .insert({
-            organization_id: orgId,
+            user_id: userId,
             name: "LeadFlow Integration",
             active: true,
         })
@@ -75,28 +79,29 @@ export async function generateLeadflowKey(orgId = DEFAULT_ORG_ID): Promise<Leadf
 }
 
 /** Aktif key'i iptal et */
-export async function revokeLeadflowKey(orgId = DEFAULT_ORG_ID): Promise<void> {
+export async function revokeLeadflowKey(): Promise<void> {
+    const userId = await currentUserId();
     await supabase
         .from("leadflow_connections")
         .update({ active: false })
-        .eq("organization_id", orgId)
+        .eq("user_id", userId)
         .eq("active", true);
 }
 
 /* ── Lead Listesi ─────────────────────────────────────────── */
 
-/** LeadFlow'dan gelen contactları getir */
+/** LeadFlow'dan gelen contactları getir (sadece bu kullanıcınınkiler) */
 export async function getLeadflowLeads(
-    orgId = DEFAULT_ORG_ID,
     opts: { limit?: number; offset?: number } = {}
 ): Promise<{ leads: LeadflowContact[]; total: number }> {
+    const userId = await currentUserId();
     const from = opts.offset ?? 0;
     const to   = from + (opts.limit ?? 100) - 1;
 
     const { data, count, error } = await supabase
         .from("contacts")
         .select("id, name, phone, email, source, tags, custom_data, leadflow_id, created_at", { count: "exact" })
-        .eq("organization_id", orgId)
+        .eq("user_id", userId)
         .eq("source", "leadflow")
         .order("created_at", { ascending: false })
         .range(from, to);

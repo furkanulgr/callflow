@@ -12,6 +12,7 @@ import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
 import { getPhoneNumbers, PhoneNumberItem, getAgents, AgentListItem, startBatchCalling, getConversations, getBatchCall, cancelBatchCall, aggregateBatchStats } from "@/services/elevenlabsApi";
 import { supabase } from "@/lib/supabase";
 import { getLeadflowLeads, LeadflowContact } from "@/services/leadflowApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 type CampaignStatus = "active" | "paused" | "completed" | "draft";
 
@@ -71,6 +72,7 @@ const WIZARD_STEPS = [
 ];
 
 export const CampaignsPage = () => {
+    const { user } = useAuth();
     const [showModal, setShowModal] = useState(false);
     const [campaignList, setCampaignList] = useState<CampaignRow[]>([]);
     const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
@@ -172,11 +174,13 @@ export const CampaignsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCampaign?.id]);
 
-    // Supabase'den kampanyaları çek, sonra ElevenLabs'ten gerçek istatistikleri güncelle
+    // Supabase'den kampanyaları çek (sadece bu kullanıcıya ait), sonra ElevenLabs'ten gerçek istatistikleri güncelle
     useEffect(() => {
+        if (!user) return;
         supabase
             .from("campaigns")
             .select("*")
+            .eq("user_id", user.id)
             .order("created_at", { ascending: false })
             .then(async ({ data, error }) => {
                 if (!error && data) {
@@ -213,7 +217,7 @@ export const CampaignsPage = () => {
                     setIsLoadingCampaigns(false);
                 }
             });
-    }, []);
+    }, [user]);
 
     // Wizard state
     const [wizardStep, setWizardStep] = useState(1);

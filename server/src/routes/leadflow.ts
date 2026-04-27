@@ -1,14 +1,11 @@
 /**
- * LeadFlow Integration Routes
+ * LeadFlow Integration Routes (User-scoped Multi-tenant)
  *
  * LeadFlow → CallFlow lead aktarım köprüsü.
  * API key ile authenticate olan LeadFlow instance'ı bu endpoint'e POST atar.
+ * Server, key'in sahibi user_id'yi bulup contacts tablosuna user_id ile yazar.
  *
- * POST /api/leadflow/receive          — LeadFlow'dan lead al (Bearer token)
- * POST /api/leadflow/key/generate     — Yeni API key üret
- * GET  /api/leadflow/key/:orgId       — Mevcut key'i getir
- * POST /api/leadflow/key/:orgId/revoke — Key'i iptal et
- * GET  /api/leadflow/leads/:orgId     — Henüz kampanyaya atanmamış leadleri listele
+ * POST /api/leadflow/receive  — LeadFlow'dan lead al (Bearer token gerekli)
  */
 
 import { Router, Request, Response } from 'express';
@@ -35,15 +32,15 @@ leadflowRouter.post('/receive', async (req: Request, res: Response): Promise<voi
     return;
   }
 
-  // Key'i doğrula, organization_id'yi al
+  // Key'i doğrula, user_id'yi al
   const { data: conn, error: connError } = await supabase
     .from('leadflow_connections')
-    .select('id, organization_id')
+    .select('id, user_id')
     .eq('api_key', apiKey)
     .eq('active', true)
     .single();
 
-  if (connError || !conn) {
+  if (connError || !conn || !conn.user_id) {
     res.status(401).json({ error: 'Geçersiz veya pasif API key.' });
     return;
   }
@@ -60,7 +57,7 @@ leadflowRouter.post('/receive', async (req: Request, res: Response): Promise<voi
     const { data: existing } = await supabase
       .from('contacts')
       .select('id')
-      .eq('organization_id', conn.organization_id)
+      .eq('user_id', conn.user_id)
       .eq('leadflow_id', leadflow_id)
       .maybeSingle();
 
@@ -70,18 +67,18 @@ leadflowRouter.post('/receive', async (req: Request, res: Response): Promise<voi
     }
   }
 
-  // contacts tablosuna ekle
+  // contacts tablosuna ekle (user_id ile)
   const { data: contact, error: insertError } = await supabase
     .from('contacts')
     .insert({
-      organization_id: conn.organization_id,
-      name:            name ?? phone,
+      user_id:     conn.user_id,
+      name:        name ?? phone,
       phone,
-      email:           email ?? null,
-      source:          source ?? 'leadflow',
-      tags:            tags ?? [],
-      custom_data:     custom_fields ?? {},
-      leadflow_id:     leadflow_id ?? null,
+      email:       email ?? null,
+      source:      source ?? 'leadflow',
+      tags:        tags ?? [],
+      custom_data: custom_fields ?? {},
+      leadflow_id: leadflow_id ?? null,
     })
     .select('id')
     .single();
@@ -98,98 +95,89 @@ leadflowRouter.post('/receive', async (req: Request, res: Response): Promise<voi
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', conn.id);
 
+  console.log(`[LeadFlow] ✅ Lead alındı | user: ${conn.user_id} | phone: ${phone}`);
   res.status(201).json({ success: true, contact_id: contact.id });
 });
 
-/* ── POST /api/leadflow/key/generate ───────────────────────── */
-// Yeni API key üret (varsa eskiyi pasife al, yeni key aç)
-leadflowRouter.post('/key/generate', async (req: Request, res: Response): Promise<void> => {
-  const { organization_id, name } = req.body;
+/* ── POST /api/leadflow/receive-bulk ───────────────────────── */
+// Birden fazla lead'i tek seferde gönder
+leadflowRouter.post('/receive-bulk', async (req: Request, res: Response): Promise<void> => {
+  const apiKey = extractBearer(req);
 
-  if (!organization_id) {
-    res.status(400).json({ error: 'organization_id zorunludur.' });
+  if (!apiKey) {
+    res.status(401).json({ error: 'Authorization header eksik.' });
     return;
   }
 
-  // Mevcut aktif key'leri pasife al
-  await supabase
+  const { data: conn, error: connError } = await supabase
     .from('leadflow_connections')
-    .update({ active: false })
-    .eq('organization_id', organization_id)
-    .eq('active', true);
-
-  // Yeni key oluştur
-  const { data, error } = await supabase
-    .from('leadflow_connections')
-    .insert({
-      organization_id,
-      name: name ?? 'LeadFlow Integration',
-      active: true,
-    })
-    .select('id, api_key, created_at')
+    .select('id, user_id')
+    .eq('api_key', apiKey)
+    .eq('active', true)
     .single();
 
-  if (error || !data) {
-    res.status(500).json({ error: 'Key oluşturulamadı.' });
+  if (connError || !conn || !conn.user_id) {
+    res.status(401).json({ error: 'Geçersiz veya pasif API key.' });
     return;
   }
 
-  res.json({ success: true, api_key: data.api_key, created_at: data.created_at });
-});
-
-/* ── GET /api/leadflow/key/:orgId ───────────────────────────── */
-leadflowRouter.get('/key/:orgId', async (req: Request, res: Response): Promise<void> => {
-  const { orgId } = req.params;
-
-  const { data } = await supabase
-    .from('leadflow_connections')
-    .select('id, api_key, name, active, created_at, last_used_at')
-    .eq('organization_id', orgId)
-    .eq('active', true)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!data) {
-    res.json({ key: null });
+  const { leads } = req.body;
+  if (!Array.isArray(leads) || leads.length === 0) {
+    res.status(400).json({ error: 'leads dizisi boş olamaz.' });
     return;
   }
 
-  res.json({ key: data });
-});
+  // Mevcut leadflow_id'leri al (deduplicate için)
+  const incomingIds = leads.map((l: any) => l.leadflow_id).filter(Boolean);
+  const { data: existing } = await supabase
+    .from('contacts')
+    .select('leadflow_id')
+    .eq('user_id', conn.user_id)
+    .in('leadflow_id', incomingIds);
 
-/* ── POST /api/leadflow/key/:orgId/revoke ───────────────────── */
-leadflowRouter.post('/key/:orgId/revoke', async (req: Request, res: Response): Promise<void> => {
-  const { orgId } = req.params;
+  const existingIds = new Set((existing ?? []).map((e: any) => e.leadflow_id));
+  const newLeads = leads.filter((l: any) => !l.leadflow_id || !existingIds.has(l.leadflow_id));
+
+  if (newLeads.length === 0) {
+    res.json({ success: 0, duplicate: leads.length, fail: 0 });
+    return;
+  }
+
+  const rows = newLeads.map((l: any) => ({
+    user_id:     conn.user_id,
+    name:        l.name ?? l.phone,
+    phone:       l.phone,
+    email:       l.email ?? null,
+    source:      l.source ?? 'leadflow',
+    tags:        l.tags ?? [],
+    custom_data: l.custom_fields ?? {},
+    leadflow_id: l.leadflow_id ?? null,
+  }));
+
+  const { error: insertError } = await supabase
+    .from('contacts')
+    .insert(rows);
+
+  if (insertError) {
+    console.error('[LeadFlow] Bulk insert error:', insertError.message);
+    res.status(500).json({ error: 'Toplu kayıt başarısız.' });
+    return;
+  }
 
   await supabase
     .from('leadflow_connections')
-    .update({ active: false })
-    .eq('organization_id', orgId)
-    .eq('active', true);
+    .update({ last_used_at: new Date().toISOString() })
+    .eq('id', conn.id);
 
-  res.json({ success: true });
+  console.log(`[LeadFlow] ✅ Toplu lead alındı | user: ${conn.user_id} | yeni: ${newLeads.length} | duplicate: ${existingIds.size}`);
+  res.status(201).json({
+    success: newLeads.length,
+    duplicate: existingIds.size,
+    fail: 0,
+  });
 });
 
-/* ── GET /api/leadflow/leads/:orgId ─────────────────────────── */
-// Kampanyaya henüz atanmamış LeadFlow kaynaklı contactları getir
-leadflowRouter.get('/leads/:orgId', async (req: Request, res: Response): Promise<void> => {
-  const { orgId } = req.params;
-  const limit  = parseInt(req.query['limit']  as string ?? '100', 10);
-  const offset = parseInt(req.query['offset'] as string ?? '0',   10);
-
-  const { data, error, count } = await supabase
-    .from('contacts')
-    .select('id, name, phone, email, source, tags, custom_data, leadflow_id, created_at', { count: 'exact' })
-    .eq('organization_id', orgId)
-    .eq('source', 'leadflow')
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
-  }
-
-  res.json({ leads: data ?? [], total: count ?? 0 });
+/* ── GET /api/leadflow/health ──────────────────────────────── */
+leadflowRouter.get('/health', (_req: Request, res: Response) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
 });
