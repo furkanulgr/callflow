@@ -50,8 +50,8 @@ interface ElevenLabsWebhookPayload {
 
 // ─── HMAC signature doğrulama ─────────────────────────────────────────────────
 function verifyElevenLabsSignature(req: Request): boolean {
-  const secret = process.env.ELEVENLABS_WEBHOOK_SECRET;
-  if (!secret) {
+  const rawSecret = process.env.ELEVENLABS_WEBHOOK_SECRET;
+  if (!rawSecret) {
     console.log('[Webhook] ⚠️ ELEVENLABS_WEBHOOK_SECRET tanımlı değil — geçildi');
     return true;
   }
@@ -61,8 +61,6 @@ function verifyElevenLabsSignature(req: Request): boolean {
     console.warn('[Webhook] ❌ elevenlabs-signature header eksik');
     return false;
   }
-
-  console.log(`[Webhook] 🔍 signature header: ${signature.substring(0, 30)}...`);
 
   // ElevenLabs imza formatı: t=timestamp,v0=hash
   const parts = Object.fromEntries(signature.split(',').map(p => p.split('=')));
@@ -74,29 +72,33 @@ function verifyElevenLabsSignature(req: Request): boolean {
   }
 
   const rawBody = (req as any).rawBody as string | undefined;
-  console.log(`[Webhook] 🔍 rawBody var mı: ${!!rawBody} | uzunluk: ${rawBody?.length}`);
-  console.log(`[Webhook] 🔍 secret prefix: ${secret.substring(0, 8)}... | uzunluk: ${secret.length}`);
-
   if (!rawBody) {
     console.warn('[Webhook] ❌ rawBody yok');
     return false;
   }
 
-  // Hem rawBody hem JSON.stringify(req.body) ile dene (debug)
-  const payload1 = `${timestamp}.${rawBody}`;
-  const expected1 = createHmac('sha256', secret).update(payload1).digest('hex');
+  // Secret'ı 4 farklı şekilde dene: trim, prefix var/yok kombinasyonları
+  const secrets = [
+    rawSecret,
+    rawSecret.trim(),
+    rawSecret.replace(/^wsec_/, ''),
+    rawSecret.trim().replace(/^wsec_/, ''),
+  ];
 
-  const payload2 = `${timestamp}.${JSON.stringify(req.body)}`;
-  const expected2 = createHmac('sha256', secret).update(payload2).digest('hex');
+  const payload = `${timestamp}.${rawBody}`;
 
-  console.log(`[Webhook] 🔍 received hash: ${hash.substring(0, 16)}...`);
-  console.log(`[Webhook] 🔍 expected (rawBody):    ${expected1.substring(0, 16)}...`);
-  console.log(`[Webhook] 🔍 expected (stringify):  ${expected2.substring(0, 16)}...`);
+  for (const s of secrets) {
+    const expected = createHmac('sha256', s).update(payload).digest('hex');
+    if (expected === hash) {
+      console.log('[Webhook] ✅ HMAC doğrulandı');
+      return true;
+    }
+  }
 
-  const ok = expected1 === hash || expected2 === hash;
-  if (!ok) console.warn('[Webhook] ❌ HMAC eşleşmedi');
-  else console.log('[Webhook] ✅ HMAC doğrulandı');
-  return ok;
+  console.warn('[Webhook] ❌ HMAC eşleşmedi (4 secret varyantı denendi)');
+  console.warn(`[Webhook]    received: ${hash.substring(0, 16)}...`);
+  console.warn(`[Webhook]    secret length: ${rawSecret.length} (trimmed: ${rawSecret.trim().length})`);
+  return false;
 }
 
 // ─── POST /api/webhooks/elevenlabs ───────────────────────────────────────────
