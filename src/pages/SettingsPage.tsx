@@ -100,8 +100,9 @@ export const SettingsPage = () => {
             const key = await generateLeadflowKey();
             setLfKey(key);
             setLfKeyVisible(true);
-        } catch {
-            setLfKeyError("Key oluşturulamadı. Supabase bağlantısını kontrol et.");
+        } catch (err: any) {
+            console.error("[generateLeadflowKey] Hata:", err);
+            setLfKeyError(`Key oluşturulamadı: ${err?.message ?? "bilinmeyen hata"}`);
         } finally {
             setLfGenerating(false);
         }

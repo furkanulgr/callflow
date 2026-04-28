@@ -11,6 +11,7 @@ import { config } from './config';
 import { callsRouter } from './routes/calls';
 import { webhooksRouter } from './routes/webhooks';
 import { leadflowRouter } from './routes/leadflow';
+import { n8nProxyRouter } from './routes/n8n-proxy';
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/api/calls',    callsRouter);
 app.use('/webhooks',     webhooksRouter);
 app.use('/api/leadflow', leadflowRouter);
+app.use('/api/n8n',      n8nProxyRouter);
 
 // Health check
 app.get('/health', (_req, res) => {
