@@ -58,7 +58,7 @@ n8nProxyRouter.all('/*', async (req: Request, res: Response): Promise<void> => {
       method: req.method,
       headers: forwardHeaders,
       body: hasBody ? bodyString : undefined,
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(600_000),
     });
 
     // Content-Type'ı yansıt
