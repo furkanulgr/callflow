@@ -458,7 +458,7 @@ export const SettingsPage = () => {
                                                     <p className="text-[11px] text-slate-500">LeadFlow → Ayarlar → CallFlow Entegrasyonu → Bu key'i gir</p>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <code className="text-[10px] bg-white border border-slate-200 rounded px-2 py-1 font-mono text-slate-600 flex-1 truncate">
-                                                            {import.meta.env['VITE_BRIDGE_SERVER_URL'] ?? 'http://localhost:3001'}/api/leadflow/receive
+                                                            {import.meta.env['VITE_BRIDGE_SERVER_URL'] ?? 'https://callflow-production-3ce4.up.railway.app'}/api/leadflow/receive
                                                         </code>
                                                     </div>
                                                 </div>
