@@ -31,20 +31,30 @@ n8nProxyRouter.all('/*', async (req: Request, res: Response): Promise<void> => {
   console.log(`[n8n-proxy] ${req.method} ${path}${queryString}`);
 
   try {
-    // Header'ları kopyala (host hariç)
+    // Body'yi belirle: raw body varsa onu kullan (express verify hook), yoksa JSON.stringify
+    const rawBody = (req as any).rawBody as string | undefined;
+    const bodyString = rawBody ?? (req.body ? JSON.stringify(req.body) : undefined);
+    const hasBody = !['GET', 'HEAD'].includes(req.method) && bodyString !== undefined;
+
+    // Header'ları kopyala — fetch'in kendi yöneteceği başlıkları ÇIKAR
+    const skip = new Set(['host', 'origin', 'content-length', 'connection', 'accept-encoding', 'transfer-encoding']);
     const forwardHeaders: Record<string, string> = {};
     for (const [key, value] of Object.entries(req.headers)) {
-      if (typeof value === 'string' && key !== 'host' && key !== 'origin') {
+      if (typeof value === 'string' && !skip.has(key.toLowerCase())) {
         forwardHeaders[key] = value;
       }
     }
-    forwardHeaders['Content-Type'] = forwardHeaders['Content-Type'] || 'application/json';
+    if (hasBody) {
+      forwardHeaders['Content-Type'] = forwardHeaders['content-type'] || forwardHeaders['Content-Type'] || 'application/json';
+    }
+
+    console.log(`[n8n-proxy] Forwarding body length: ${bodyString?.length ?? 0}`);
 
     const response = await fetch(`${targetUrl}${queryString}`, {
       method: req.method,
       headers: forwardHeaders,
-      body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
-      signal: AbortSignal.timeout(120_000), // 2 dakika timeout (lead arama uzun sürebilir)
+      body: hasBody ? bodyString : undefined,
+      signal: AbortSignal.timeout(120_000),
     });
 
     // Content-Type'ı yansıt
