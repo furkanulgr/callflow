@@ -15,7 +15,7 @@ import { Router, Request, Response } from 'express';
 
 export const n8nProxyRouter = Router();
 
-const N8N_BASE_URL = process.env.N8N_BASE_URL || 'https://n8n.lueratech.com';
+const N8N_BASE_URL = process.env.N8N_BASE_URL || 'https://n8n.vps.lueratech.com';
 
 // Tüm HTTP method'ları kabul et
 n8nProxyRouter.all('/*', async (req: Request, res: Response): Promise<void> => {
