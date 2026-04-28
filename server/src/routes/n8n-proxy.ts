@@ -36,8 +36,12 @@ n8nProxyRouter.all('/*', async (req: Request, res: Response): Promise<void> => {
     const bodyString = rawBody ?? (req.body ? JSON.stringify(req.body) : undefined);
     const hasBody = !['GET', 'HEAD'].includes(req.method) && bodyString !== undefined;
 
-    // Header'ları kopyala — fetch'in kendi yöneteceği başlıkları ÇIKAR
-    const skip = new Set(['host', 'origin', 'content-length', 'connection', 'accept-encoding', 'transfer-encoding']);
+    // Header'ları kopyala — fetch'in kendi yöneteceği veya çakışan başlıkları ÇIKAR
+    const skip = new Set([
+      'host', 'origin', 'content-length', 'connection',
+      'accept-encoding', 'transfer-encoding',
+      'content-type', // bizim manuel set edeceğiz
+    ]);
     const forwardHeaders: Record<string, string> = {};
     for (const [key, value] of Object.entries(req.headers)) {
       if (typeof value === 'string' && !skip.has(key.toLowerCase())) {
@@ -45,7 +49,7 @@ n8nProxyRouter.all('/*', async (req: Request, res: Response): Promise<void> => {
       }
     }
     if (hasBody) {
-      forwardHeaders['Content-Type'] = forwardHeaders['content-type'] || forwardHeaders['Content-Type'] || 'application/json';
+      forwardHeaders['Content-Type'] = 'application/json';
     }
 
     console.log(`[n8n-proxy] Forwarding body length: ${bodyString?.length ?? 0}`);
