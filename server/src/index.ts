@@ -5,6 +5,19 @@
  * WebSocket bridge gerekmez. Sadece HTTP server yeterli.
  */
 
+import * as Sentry from '@sentry/node';
+
+// Sentry — diğer importlardan ÖNCE init edilmeli
+const SENTRY_DSN = process.env.SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0.1,
+  });
+  console.log('[Sentry] Error tracking aktif');
+}
+
 import express from 'express';
 import cors from 'cors';
 import { config } from './config';
@@ -14,6 +27,11 @@ import { leadflowRouter } from './routes/leadflow';
 import { n8nProxyRouter } from './routes/n8n-proxy';
 
 const app = express();
+
+// Sentry handler express app'e bağlanır (sadece DSN varsa)
+if (SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors({
