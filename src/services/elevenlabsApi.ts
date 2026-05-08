@@ -90,9 +90,19 @@ export interface AgentConfig {
         agent: {
             prompt: {
                 prompt: string;
+                knowledge_base?: any[];
+                rag?: { enabled?: boolean };
             };
             first_message?: string;
-        }
+        };
+        tts?: {
+            voice_id?: string;
+            stability?: number;
+            similarity_boost?: number;
+            style?: number;
+            use_speaker_boost?: boolean;
+            speed?: number;
+        };
     };
     [key: string]: any;
 }

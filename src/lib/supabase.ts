@@ -4,7 +4,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Supabase env vars eksik! .env.local dosyasını kontrol et.");
+    throw new Error("Supabase env vars eksik: VITE_SUPABASE_URL ve VITE_SUPABASE_ANON_KEY gereklidir.");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export async function getCurrentSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session;
+}

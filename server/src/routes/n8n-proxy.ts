@@ -15,10 +15,14 @@ import { Router, Request, Response } from 'express';
 
 export const n8nProxyRouter = Router();
 
-const N8N_BASE_URL = process.env.N8N_BASE_URL || 'https://n8n.vps.lueratech.com';
+const N8N_BASE_URL = process.env.N8N_BASE_URL;
 
 // Tüm HTTP method'ları kabul et
 n8nProxyRouter.all('/*', async (req: Request, res: Response): Promise<void> => {
+  if (!N8N_BASE_URL) {
+    res.status(503).json({ error: 'N8N_BASE_URL is not configured' });
+    return;
+  }
   // /api/n8n/webhook/abc → /webhook/abc
   const path = req.path;
   const targetUrl = `${N8N_BASE_URL}${path}`;
@@ -72,9 +76,6 @@ n8nProxyRouter.all('/*', async (req: Request, res: Response): Promise<void> => {
     console.log(`[n8n-proxy] ✅ ${response.status} ${path}`);
   } catch (err: any) {
     console.error(`[n8n-proxy] ❌ Hata: ${err.message}`);
-    res.status(502).json({
-      error: 'n8n proxy hatası',
-      details: err.message,
-    });
+    res.status(502).json({ error: 'Upstream service unavailable' });
   }
 });

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api";
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface WaTemplate {
@@ -205,6 +206,15 @@ export const WhatsAppPage = () => {
     const [preview, setPreview]         = useState(false);
     const [expandedId, setExpandedId]   = useState<string | null>(null);
 
+    // WhatsApp bağlantı durumu (Twilio API'den gerçek durum)
+    const [waStatus, setWaStatus] = useState<{ connected: boolean; phoneNumber: string | null; reason: string | null } | null>(null);
+
+    useEffect(() => {
+        apiFetch<{ connected: boolean; phoneNumber: string | null; reason: string | null }>("/api/whatsapp/status")
+            .then(data => setWaStatus(data))
+            .catch(() => setWaStatus({ connected: false, phoneNumber: null, reason: "Bridge sunucusuna erişilemiyor" }));
+    }, []);
+
     /* ── Fetch templates ─────────────────────────────────────── */
     const fetchTemplates = useCallback(async () => {
         setLoading(true);
@@ -289,10 +299,25 @@ export const WhatsAppPage = () => {
                         <h1 className="text-3xl font-bold text-slate-800 tracking-tight">WhatsApp</h1>
                         <p className="text-sm text-slate-500 mt-1">Otomatik mesaj şablonları ve gönderim yönetimi</p>
                     </div>
-                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border bg-emerald-50 border-emerald-100 shadow-[0_2px_10px_rgba(16,185,129,0.05)]">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[13px] font-bold text-emerald-700">WhatsApp Bağlı</span>
-                    </div>
+                    {waStatus === null ? (
+                        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                            <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin" />
+                            <span className="text-[13px] font-medium text-slate-500">Durum kontrol ediliyor...</span>
+                        </div>
+                    ) : waStatus.connected ? (
+                        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border bg-emerald-50 border-emerald-100 shadow-[0_2px_10px_rgba(16,185,129,0.05)]">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[13px] font-bold text-emerald-700">WhatsApp Bağlı</span>
+                            {waStatus.phoneNumber && (
+                                <span className="text-[11px] font-mono text-emerald-600">{waStatus.phoneNumber}</span>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-amber-200 bg-amber-50" title={waStatus.reason ?? ""}>
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                            <span className="text-[13px] font-bold text-amber-700">WhatsApp Bağlı Değil</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Stats */}

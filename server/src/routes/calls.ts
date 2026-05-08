@@ -13,6 +13,7 @@
 
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import * as Sentry from '@sentry/node';
 import { config } from '../config';
 import { createCallRecord, updateCallStatus } from '../services/supabase';
 import { elevenlabsApi } from '../services/elevenlabs';
@@ -76,7 +77,8 @@ callsRouter.post('/outbound', async (req: Request, res: Response): Promise<void>
   } catch (err) {
     const error = err as Error;
     console.error('[Calls] Çağrı başlatılamadı:', error.message);
-    res.status(500).json({ error: error.message });
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -139,7 +141,8 @@ callsRouter.post('/batch', async (req: Request, res: Response): Promise<void> =>
   } catch (err) {
     const error = err as Error;
     console.error('[Calls] Batch çağrı hatası:', error.message);
-    res.status(500).json({ error: error.message });
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -150,8 +153,9 @@ callsRouter.get('/phone-numbers', async (_req: Request, res: Response): Promise<
     const numbers = await elevenlabsApi.getPhoneNumbers();
     res.json({ success: true, phoneNumbers: numbers });
   } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ error: error.message });
+    console.error('[Calls] Telefon numaraları alınamadı:', (err as Error).message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -171,8 +175,9 @@ callsRouter.get('/active', async (_req: Request, res: Response): Promise<void> =
 
     res.json({ success: true, count: data.length, calls: data });
   } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ error: error.message });
+    console.error('[Calls] Aktif çağrılar alınamadı:', (err as Error).message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -194,7 +199,8 @@ callsRouter.post('/:conversationId/hangup', async (req: Request, res: Response):
 
     res.json({ success: true });
   } catch (err) {
-    const error = err as Error;
-    res.status(500).json({ error: error.message });
+    console.error('[Calls] Hangup hatası:', (err as Error).message);
+    Sentry.captureException(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: callflow-server:latest
+    container_name: callflow-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+
+      # ── Twilio ────────────────────────────────────────
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
+
+      # ── ElevenLabs ────────────────────────────────────
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      ELEVENLABS_WEBHOOK_SECRET: ${ELEVENLABS_WEBHOOK_SECRET}
+
+      # ── Supabase ──────────────────────────────────────
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+
+      # ── Server ────────────────────────────────────────
+      SERVER_URL: ${SERVER_URL}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+
+      # ── Optional ──────────────────────────────────────
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      N8N_BASE_URL: ${N8N_BASE_URL:-}
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-}
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

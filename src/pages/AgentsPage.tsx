@@ -5,6 +5,7 @@ import { cn, formatDuration } from "@/utils/cn";
 import { AgentPromptEditor } from "@/components/AgentPromptEditor";
 import { VoiceAgentDemoModal } from "@/components/VoiceAgentDemoModal";
 import { CreateAgentModal } from "@/components/CreateAgentModal";
+import { InboundConnectionPanel } from "@/components/InboundConnectionPanel";
 
 interface AgentStats {
     total: number;
@@ -30,6 +31,9 @@ export const AgentsPage = () => {
     const [deletingAgent, setDeletingAgent] = useState<AgentListItem | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    // Inbound connection panel
+    const [inboundAgent, setInboundAgent] = useState<AgentListItem | null>(null);
 
     // Duplicate flow
     const [duplicatingAgent, setDuplicatingAgent] = useState<AgentListItem | null>(null);
@@ -272,12 +276,21 @@ export const AgentsPage = () => {
                                 >
                                     <Headphones className="w-4 h-4" /> Bağlan
                                 </button>
-                                <button
-                                    onClick={() => setEditingAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
-                                    className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 text-slate-400 rounded-xl font-bold text-sm hover:bg-white/10 hover:text-white transition-all active:scale-[0.98]"
-                                >
-                                    <Settings2 className="w-4 h-4" /> Yapılandır
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setEditingAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 text-slate-400 rounded-xl font-bold text-sm hover:bg-white/10 hover:text-white transition-all active:scale-[0.98]"
+                                    >
+                                        <Settings2 className="w-4 h-4" /> Yapılandır
+                                    </button>
+                                    <button
+                                        onClick={() => setInboundAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
+                                        className="p-3 bg-white/5 border border-white/10 text-slate-400 rounded-xl hover:text-[#CCFF00] hover:bg-[#CCFF00]/10 hover:border-[#CCFF00]/20 transition-all active:scale-[0.98]"
+                                        title="Gelen Arama Bağlantısı"
+                                    >
+                                        <Phone className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -341,6 +354,13 @@ export const AgentsPage = () => {
                                             className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 hover:text-slate-900 transition-all active:scale-[0.98]"
                                         >
                                             <Settings2 className="w-4 h-4" /> Yapılandır
+                                        </button>
+                                        <button
+                                            onClick={() => setInboundAgent(agent)}
+                                            className="p-3 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-all active:scale-[0.98]"
+                                            title="Gelen Arama Bağlantısı"
+                                        >
+                                            <Phone className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => openDuplicate(agent)}
@@ -522,6 +542,14 @@ export const AgentsPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Inbound Connection Panel */}
+            <InboundConnectionPanel
+                agentId={inboundAgent?.agent_id ?? ""}
+                agentName={inboundAgent?.name ?? ""}
+                isOpen={inboundAgent !== null}
+                onClose={() => setInboundAgent(null)}
+            />
 
             {/* Create New Agent Modal */}
             <CreateAgentModal

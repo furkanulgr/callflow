@@ -11,6 +11,7 @@ import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { createHmac } from 'crypto';
 import { config } from '../config';
+import { sendWhatsAppAfterCall } from './whatsapp';
 
 export const webhooksRouter = Router();
 
@@ -77,27 +78,16 @@ function verifyElevenLabsSignature(req: Request): boolean {
     return false;
   }
 
-  // Secret'ı 4 farklı şekilde dene: trim, prefix var/yok kombinasyonları
-  const secrets = [
-    rawSecret,
-    rawSecret.trim(),
-    rawSecret.replace(/^wsec_/, ''),
-    rawSecret.trim().replace(/^wsec_/, ''),
-  ];
-
+  const secret = rawSecret.trim();
   const payload = `${timestamp}.${rawBody}`;
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
 
-  for (const s of secrets) {
-    const expected = createHmac('sha256', s).update(payload).digest('hex');
-    if (expected === hash) {
-      console.log('[Webhook] ✅ HMAC doğrulandı');
-      return true;
-    }
+  if (expected === hash) {
+    console.log('[Webhook] ✅ HMAC doğrulandı');
+    return true;
   }
 
-  console.warn('[Webhook] ❌ HMAC eşleşmedi (4 secret varyantı denendi)');
-  console.warn(`[Webhook]    received: ${hash.substring(0, 16)}...`);
-  console.warn(`[Webhook]    secret length: ${rawSecret.length} (trimmed: ${rawSecret.trim().length})`);
+  console.warn('[Webhook] ❌ HMAC eşleşmedi');
   return false;
 }
 
@@ -218,6 +208,26 @@ webhooksRouter.post('/elevenlabs', async (req: Request, res: Response): Promise<
     console.log(
       `[Webhook] ✅ Kampanya güncellendi | id: ${campaign.id} | yanıtladı: ${wasAnswered} | süre: ${call_duration_secs}s`
     );
+
+    // 4. Arama sonrası otomatik WhatsApp tetikleyici (hata olursa kampanya akışını bloklamaz)
+    if (wasAnswered && phoneNumber) {
+      // Kampanyanın kullanıcısını bul
+      const { data: camp } = await supabase
+        .from('campaigns')
+        .select('user_id')
+        .eq('id', campaign.id)
+        .single();
+
+      if (camp?.user_id) {
+        sendWhatsAppAfterCall({
+          userId:         camp.user_id,
+          toPhone:        phoneNumber,
+          conversationId: conversation_id,
+          agentId:        agent_id,
+          callSuccessful: analysis?.call_successful || 'unknown',
+        }).catch(() => { /* fire-and-forget */ });
+      }
+    }
 
   } catch (err) {
     console.error('[Webhook] Hata:', err);

@@ -10,9 +10,12 @@
 import { Router, Request, Response } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
+import { createClient } from '@supabase/supabase-js';
 import { config } from '../config';
 import { handleTwilioMediaStream } from '../services/bridge';
 import { updateCallStatus } from '../services/supabase';
+
+const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
 
 export const twilioRouter = Router();
 
@@ -44,10 +47,26 @@ twilioRouter.post('/twiml/outbound', (req: Request, res: Response) => {
 });
 
 // ─── TwiML: Inbound çağrı geldiğinde ─────────────────────────────────────────
-twilioRouter.post('/twiml/inbound', (req: Request, res: Response) => {
-  // Telefon numarasına göre hangi agent'ın cevap vereceğini belirleyebilirsiniz
-  // Şimdilik env'deki default agent'ı kullan
-  const { agentDbId, organizationId } = req.query as Record<string, string>;
+// Gelen numaraya (To) bakarak inbound_connections tablosundan agent bulunur.
+// Bulunamazsa fallback olarak query param agentDbId kullanılır (geriye uyumluluk).
+twilioRouter.post('/twiml/inbound', async (req: Request, res: Response) => {
+  const toNumber: string = req.body?.To ?? req.query['To'] ?? '';
+  const fromNumber: string = req.body?.From ?? '';
+
+  let agentDbId = req.query['agentDbId'] as string | undefined;
+
+  // DB'de bu numaraya bağlı bir Twilio connection ara
+  if (toNumber) {
+    const { data: conn } = await supabase
+      .from('inbound_connections')
+      .select('agent_db_id, elevenlabs_agent_id')
+      .eq('phone_number', toNumber)
+      .eq('provider_type', 'twilio')
+      .eq('is_active', true)
+      .single();
+
+    if (conn?.agent_db_id) agentDbId = conn.agent_db_id;
+  }
 
   const streamUrl = `${config.serverUrl.replace('https://', 'wss://').replace('http://', 'ws://')}/stream`;
 
@@ -56,13 +75,13 @@ twilioRouter.post('/twiml/inbound', (req: Request, res: Response) => {
   <Connect>
     <Stream url="${streamUrl}">
       <Parameter name="agentDbId" value="${agentDbId ?? ''}" />
-      <Parameter name="organizationId" value="${organizationId ?? ''}" />
+      <Parameter name="toNumber"  value="${toNumber}" />
     </Stream>
   </Connect>
 </Response>`;
 
   res.type('text/xml').send(twiml);
-  console.log(`[TwiML] Inbound çağrı cevaplandı | from: ${req.body?.From}`);
+  console.log(`[TwiML] Inbound | to: ${toNumber} | from: ${fromNumber} | agent: ${agentDbId ?? 'fallback'}`);
 });
 
 // ─── Twilio Status Callback ───────────────────────────────────────────────────
