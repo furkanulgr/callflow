@@ -224,44 +224,51 @@ export const AgentsPage = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 animate-in slide-in-from-bottom-8 duration-700 fade-in delay-100 fill-mode-backwards">
 
-                        {/* ── ANA ASİSTAN KARTI (Dark) ── */}
-                        <div className="group relative flex flex-col rounded-2xl overflow-hidden border border-[#CCFF00]/20 shadow-xl hover:shadow-[0_24px_48px_rgba(204,255,0,0.12)] hover:-translate-y-1 transition-all duration-300 bg-slate-950">
+                        {/* ── ANA ASİSTAN KARTI (Dark Premium) ── */}
+                        <div className="group relative flex flex-col rounded-2xl overflow-hidden border border-[#CCFF00]/25 shadow-xl hover:shadow-[0_28px_56px_rgba(204,255,0,0.14)] hover:-translate-y-1.5 transition-all duration-300 bg-slate-950">
+
+                            {/* Top glow bar */}
+                            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#CCFF00]/0 via-[#CCFF00] to-[#CCFF00]/0" />
 
                             {/* Card Header */}
-                            <div className="relative px-5 pt-5 pb-4 border-b border-white/5">
-                                <div className="absolute inset-0 bg-gradient-to-br from-[#CCFF00]/8 to-transparent pointer-events-none" />
-                                <div className="flex items-center justify-between relative z-10">
+                            <div className="relative px-5 pt-5 pb-5 overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 pointer-events-none" />
+                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(204,255,0,0.12),transparent_60%)] pointer-events-none" />
+
+                                <div className="flex items-center justify-between relative z-10 mb-3.5">
                                     {/* Avatar */}
                                     <div className="relative">
-                                        <div className="w-12 h-12 rounded-xl bg-[#CCFF00]/10 border border-[#CCFF00]/20 flex items-center justify-center">
-                                            <Bot className="w-6 h-6 text-[#CCFF00]" />
+                                        <div className="w-11 h-11 rounded-xl bg-[#CCFF00]/15 border border-[#CCFF00]/30 flex items-center justify-center shadow-[0_0_20px_rgba(204,255,0,0.12)]">
+                                            <Bot className="w-5 h-5 text-[#CCFF00]" />
                                         </div>
-                                        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#CCFF00] border-2 border-slate-950 shadow-[0_0_8px_#CCFF00]" />
+                                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#CCFF00] border-2 border-slate-950 shadow-[0_0_8px_rgba(204,255,0,0.8)]" />
                                     </div>
                                     {/* Badge */}
-                                    <span className="text-[10px] font-bold tracking-widest uppercase text-[#CCFF00]/70 bg-[#CCFF00]/10 border border-[#CCFF00]/20 px-2.5 py-1 rounded-full">
-                                        Ana Asistan
+                                    <span className="text-[10px] font-black tracking-widest uppercase text-[#CCFF00] bg-[#CCFF00]/10 border border-[#CCFF00]/25 px-2.5 py-1 rounded-full">
+                                        ★ Ana Asistan
                                     </span>
                                 </div>
-                                <h3 className="text-lg font-black text-white mt-3 tracking-tight line-clamp-1 relative z-10">ZEYNEP</h3>
-                                <p className="text-[11px] text-slate-500 font-mono mt-0.5 truncate relative z-10">agent_6701kn...</p>
+                                <h3 className="text-[17px] font-black text-white tracking-tight line-clamp-1 relative z-10">ZEYNEP</h3>
+                                <p className="text-[10px] text-slate-600 font-mono mt-0.5 truncate relative z-10">agent_6701kn…</p>
                             </div>
 
-                            {/* Stats */}
+                            {/* Stats — 4-cell */}
                             {(() => {
                                 const s = getStats(LUNA_AGENT_ID);
                                 return (
-                                    <div className="grid grid-cols-2 divide-x divide-y divide-white/5 border-b border-white/5">
+                                    <div className="grid grid-cols-4 border-b border-white/5">
                                         {[
-                                            { icon: Phone,       value: `${s.total}`,              label: "Arama",   color: "text-[#CCFF00]" },
-                                            { icon: TrendingUp,  value: `%${s.answerRate}`,        label: "Yanıt",   color: "text-emerald-400" },
-                                            { icon: Clock,       value: formatDuration(s.avgDuration), label: "Ort. Süre", color: "text-sky-400" },
-                                            { icon: CheckCircle2,value: `${s.successCount}`,       label: "Başarı",  color: "text-[#CCFF00]" },
-                                        ].map(({ icon: Icon, value, label, color }) => (
-                                            <div key={label} className="flex flex-col gap-0.5 px-4 py-3">
-                                                <Icon className={cn("w-3.5 h-3.5 mb-1", color)} />
-                                                <span className="text-sm font-black text-white">{value}</span>
-                                                <span className="text-[10px] text-slate-500 font-medium">{label}</span>
+                                            { icon: Phone,        value: `${s.total}`,                   label: "Arama",  accent: "bg-white/5 text-[#CCFF00]" },
+                                            { icon: TrendingUp,   value: `%${s.answerRate}`,             label: "Yanıt",  accent: "bg-emerald-500/10 text-emerald-400" },
+                                            { icon: Clock,        value: formatDuration(s.avgDuration),  label: "Süre",   accent: "bg-sky-500/10 text-sky-400" },
+                                            { icon: CheckCircle2, value: `${s.successCount}`,            label: "Başarı", accent: "bg-white/5 text-[#CCFF00]" },
+                                        ].map(({ icon: Icon, value, label, accent }) => (
+                                            <div key={label} className="flex flex-col items-center justify-center py-3 px-1 gap-1 border-r last:border-r-0 border-white/5">
+                                                <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", accent)}>
+                                                    <Icon className="w-3 h-3" />
+                                                </div>
+                                                <span className="text-sm font-black text-white leading-none">{value}</span>
+                                                <span className="text-[9px] text-slate-500 font-medium leading-none">{label}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -269,26 +276,25 @@ export const AgentsPage = () => {
                             })()}
 
                             {/* Actions */}
-                            <div className="flex flex-col gap-2 p-4 mt-auto">
+                            <div className="flex flex-col gap-2 p-3.5 mt-auto">
                                 <button
                                     onClick={() => setVoiceDemoAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
-                                    className="w-full flex items-center justify-center gap-2 py-3 bg-[#CCFF00] text-slate-900 rounded-xl font-black text-sm hover:brightness-110 hover:-translate-y-0.5 transition-all active:scale-[0.98] shadow-[0_4px_16px_rgba(204,255,0,0.25)]"
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#CCFF00] text-slate-900 rounded-xl font-black text-sm hover:brightness-110 hover:-translate-y-0.5 transition-all active:scale-[0.98] shadow-[0_4px_20px_rgba(204,255,0,0.3)]"
                                 >
                                     <Headphones className="w-4 h-4" /> Bağlan
                                 </button>
-                                <div className="flex gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                     <button
                                         onClick={() => setEditingAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
-                                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 text-slate-400 rounded-xl font-bold text-sm hover:bg-white/10 hover:text-white transition-all active:scale-[0.98]"
+                                        className="flex items-center justify-center gap-1.5 py-2.5 bg-white/5 border border-white/10 text-slate-400 rounded-xl font-bold text-xs hover:bg-white/10 hover:text-white hover:border-white/20 transition-all active:scale-[0.98]"
                                     >
-                                        <Settings2 className="w-4 h-4" /> Yapılandır
+                                        <Settings2 className="w-3.5 h-3.5" /> Yapılandır
                                     </button>
                                     <button
                                         onClick={() => setInboundAgent({ agent_id: LUNA_AGENT_ID, name: 'ZEYNEP' } as any)}
-                                        className="p-3 bg-white/5 border border-white/10 text-slate-400 rounded-xl hover:text-[#CCFF00] hover:bg-[#CCFF00]/10 hover:border-[#CCFF00]/20 transition-all active:scale-[0.98]"
-                                        title="Gelen Arama Bağlantısı"
+                                        className="flex items-center justify-center gap-1.5 py-2.5 bg-white/5 border border-white/10 text-slate-400 rounded-xl font-bold text-xs hover:text-[#CCFF00] hover:bg-[#CCFF00]/10 hover:border-[#CCFF00]/25 transition-all active:scale-[0.98]"
                                     >
-                                        <Phone className="w-4 h-4" />
+                                        <Phone className="w-3.5 h-3.5" /> Gelen Arama
                                     </button>
                                 </div>
                             </div>
@@ -296,44 +302,55 @@ export const AgentsPage = () => {
 
                         {/* ── DİĞER AJAN KARTLARI ── */}
                         {agents.map((agent) => (
-                            <div key={agent.agent_id} className="group relative flex flex-col rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 bg-white">
+                            <div key={agent.agent_id} className="group relative flex flex-col rounded-2xl overflow-hidden shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 bg-white border border-slate-200/80 hover:border-slate-300">
 
-                                {/* Card Header */}
-                                <div className="relative px-5 pt-5 pb-4 border-b border-slate-100">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white pointer-events-none" />
-                                    <div className="flex items-center justify-between relative z-10">
+                                {/* Card Header — dark premium */}
+                                <div className="relative px-5 pt-5 pb-5 bg-slate-950 overflow-hidden">
+                                    {/* Background glow */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 pointer-events-none" />
+                                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(204,255,0,0.08),transparent_65%)] pointer-events-none" />
+                                    {/* Top accent line */}
+                                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#CCFF00]/0 via-[#CCFF00]/60 to-[#CCFF00]/0" />
+
+                                    <div className="relative z-10 flex items-center justify-between mb-3.5">
                                         {/* Avatar */}
                                         <div className="relative">
-                                            <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center">
-                                                <Bot className="w-6 h-6 text-[#CCFF00]" />
+                                            <div className="w-11 h-11 rounded-xl bg-[#CCFF00]/10 border border-[#CCFF00]/20 flex items-center justify-center shadow-[0_0_16px_rgba(204,255,0,0.08)]">
+                                                <Bot className="w-5.5 h-5.5 text-[#CCFF00]" />
                                             </div>
-                                            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
+                                            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
                                         </div>
                                         {/* Active badge */}
-                                        <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
-                                            <Activity className="w-3 h-3 text-emerald-500" />
-                                            <span className="text-[10px] font-bold text-emerald-600">Aktif</span>
+                                        <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                            <span className="text-[10px] font-bold text-emerald-400 tracking-wide">Aktif</span>
                                         </div>
                                     </div>
-                                    <h3 className="text-lg font-black text-slate-900 mt-3 tracking-tight line-clamp-1 relative z-10">{agent.name || "İsimsiz Asistan"}</h3>
-                                    <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate relative z-10" title={agent.agent_id}>{agent.agent_id.slice(0, 20)}...</p>
+                                    <h3 className="relative z-10 text-[17px] font-black text-white tracking-tight line-clamp-1 leading-snug">
+                                        {agent.name || "İsimsiz Asistan"}
+                                    </h3>
+                                    <p className="relative z-10 text-[10px] text-slate-600 font-mono mt-0.5 truncate" title={agent.agent_id}>
+                                        {agent.agent_id.slice(0, 22)}…
+                                    </p>
                                 </div>
 
-                                {/* Stats */}
+                                {/* Stats — 4-cell grid */}
                                 {(() => {
                                     const s = getStats(agent.agent_id);
                                     return (
-                                        <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 border-b border-slate-100">
+                                        <div className="grid grid-cols-4 border-b border-slate-100 bg-white">
                                             {[
-                                                { icon: Phone,       value: `${s.total}`,              label: "Arama",    color: "text-slate-700" },
-                                                { icon: TrendingUp,  value: `%${s.answerRate}`,        label: "Yanıt",    color: "text-emerald-600" },
-                                                { icon: Clock,       value: formatDuration(s.avgDuration), label: "Ort. Süre", color: "text-sky-600" },
-                                                { icon: Calendar,    value: formatDate(agent.created_at_unix_secs).split(" ").slice(0,2).join(" "), label: "Oluşturulma", color: "text-slate-500" },
-                                            ].map(({ icon: Icon, value, label, color }) => (
-                                                <div key={label} className="flex flex-col gap-0.5 px-4 py-3">
-                                                    <Icon className={cn("w-3.5 h-3.5 mb-1", color)} />
-                                                    <span className="text-sm font-black text-slate-800 truncate">{value}</span>
-                                                    <span className="text-[10px] text-slate-400 font-medium">{label}</span>
+                                                { icon: Phone,        value: `${s.total}`,                        label: "Arama",    accent: "bg-slate-100 text-slate-700" },
+                                                { icon: TrendingUp,   value: `%${s.answerRate}`,                  label: "Yanıt",    accent: "bg-emerald-50 text-emerald-600" },
+                                                { icon: Clock,        value: formatDuration(s.avgDuration),       label: "Süre",     accent: "bg-sky-50 text-sky-600" },
+                                                { icon: CheckCircle2, value: `${s.successCount}`,                 label: "Başarı",   accent: "bg-[#CCFF00]/10 text-[#6b8a00]" },
+                                            ].map(({ icon: Icon, value, label, accent }) => (
+                                                <div key={label} className="flex flex-col items-center justify-center py-3 px-1 gap-1 border-r last:border-r-0 border-slate-100">
+                                                    <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", accent)}>
+                                                        <Icon className="w-3 h-3" />
+                                                    </div>
+                                                    <span className="text-sm font-black text-slate-900 leading-none">{value}</span>
+                                                    <span className="text-[9px] text-slate-400 font-medium leading-none">{label}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -341,39 +358,45 @@ export const AgentsPage = () => {
                                 })()}
 
                                 {/* Actions */}
-                                <div className="flex flex-col gap-2 p-4 mt-auto">
+                                <div className="flex flex-col gap-2 p-3.5 mt-auto bg-white">
+                                    {/* Primary CTA */}
                                     <button
                                         onClick={() => setVoiceDemoAgent(agent)}
-                                        className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-[#CCFF00] rounded-xl font-black text-sm hover:bg-slate-800 hover:-translate-y-0.5 transition-all active:scale-[0.98] shadow-[0_4px_16px_rgba(15,23,42,0.12)]"
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-[#CCFF00] rounded-xl font-black text-sm hover:bg-slate-800 hover:-translate-y-0.5 transition-all active:scale-[0.98] shadow-[0_4px_14px_rgba(15,23,42,0.14)]"
                                     >
                                         <Headphones className="w-4 h-4" /> Canlı Bağlantı
                                     </button>
-                                    <div className="flex gap-2">
+
+                                    {/* Secondary row */}
+                                    <div className="grid grid-cols-2 gap-2">
                                         <button
                                             onClick={() => setEditingAgent(agent)}
-                                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 hover:text-slate-900 transition-all active:scale-[0.98]"
+                                            className="flex items-center justify-center gap-1.5 py-2.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-900 hover:text-[#CCFF00] hover:border-slate-900 transition-all active:scale-[0.98]"
                                         >
-                                            <Settings2 className="w-4 h-4" /> Yapılandır
+                                            <Settings2 className="w-3.5 h-3.5" /> Yapılandır
                                         </button>
                                         <button
                                             onClick={() => setInboundAgent(agent)}
-                                            className="p-3 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-all active:scale-[0.98]"
-                                            title="Gelen Arama Bağlantısı"
+                                            className="flex items-center justify-center gap-1.5 py-2.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl font-bold text-xs hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 transition-all active:scale-[0.98]"
                                         >
-                                            <Phone className="w-4 h-4" />
+                                            <Phone className="w-3.5 h-3.5" /> Gelen Arama
                                         </button>
+                                    </div>
+
+                                    {/* Utility row */}
+                                    <div className="flex gap-2">
                                         <button
                                             onClick={() => openDuplicate(agent)}
-                                            className="p-3 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all active:scale-[0.98]"
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all active:scale-[0.98]"
                                         >
-                                            <Copy className="w-4 h-4" />
+                                            <Copy className="w-3 h-3" /> Kopyala
                                         </button>
                                         {agent.agent_id !== LUNA_AGENT_ID && (
                                             <button
                                                 onClick={() => setDeletingAgent(agent)}
-                                                className="p-3 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all active:scale-[0.98]"
+                                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-200 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all active:scale-[0.98]"
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <Trash2 className="w-3 h-3" /> Sil
                                             </button>
                                         )}
                                     </div>
