@@ -38,7 +38,7 @@ export const CreateAgentModal = ({ isOpen, onClose, onCreated }: CreateAgentModa
             if (voice.preview_url) {
                 const audio = new Audio(voice.preview_url);
                 audioRef.current = audio;
-                audio.play().catch(e => console.log("Audio play failed", e));
+                audio.play().catch(() => {});
                 setPlayingVoiceId(voice.voice_id);
                 audio.onended = () => setPlayingVoiceId(null);
             }

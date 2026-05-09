@@ -43,21 +43,18 @@ export const LiveTestPage = () => {
 
                 const conv = await startElevenLabsConversation({
                     onConnect: () => {
-                        console.log("ElevenLabs Call started");
                         setIsCalling(true);
                         setStatus("talking");
                         setDuration(0);
                         setMessages([]); // Clear placeholder
                     },
                     onDisconnect: () => {
-                        console.log("ElevenLabs Call ended");
                         setIsCalling(false);
                         setStatus("ended");
                         setIsAiSpeaking(false);
                         conversationRef.current = null;
                     },
                     onError: (err) => {
-                        console.error("ElevenLabs error:", err);
                         setIsCalling(false);
                         setStatus("ended");
                         alert("Hata: " + err);
@@ -76,8 +73,7 @@ export const LiveTestPage = () => {
                 });
 
                 conversationRef.current = conv;
-            } catch (error) {
-                console.error("Failed to start call:", error);
+            } catch {
                 setStatus("ready");
                 alert("Çağrı başlatılamadı. Lütfen mikrofon izinlerini kontrol edin.");
             }

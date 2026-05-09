@@ -372,7 +372,7 @@ export const ResultsPage = () => {
         let success = 0, fail = 0;
         for (const call of toCall) {
             try {
-                await makeOutboundCall(call.agentId || "", call.phone);
+                await makeOutboundCall(call.agentId || "", "", call.phone);
                 success++;
             } catch {
                 fail++;

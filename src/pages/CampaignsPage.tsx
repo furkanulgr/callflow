@@ -125,7 +125,7 @@ export const CampaignsPage = () => {
                         .update(dbUpdate)
                         .eq("id", campaign.id)
                         .then(({ error }) => {
-                            if (error) console.error("[syncBatch] Supabase update error:", error.message);
+                            // fire-and-forget — errors ignored intentionally
                         });
                 }
 

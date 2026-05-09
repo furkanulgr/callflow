@@ -8,7 +8,7 @@ import { getCurrentSession } from './supabase';
 const BRIDGE_URL = import.meta.env['VITE_BRIDGE_SERVER_URL'] as string ?? 'http://localhost:3001';
 
 // ─── Base fetch wrapper ────────────────────────────────────────────────────────
-async function apiFetch<T>(
+export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {

@@ -9,8 +9,8 @@ import {
     getLeadflowKey, generateLeadflowKey, revokeLeadflowKey,
     LeadflowConnection,
 } from "@/services/leadflowApi";
-
-const STORAGE_KEY = "callflow_settings";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SettingsState {
     voice: string;
@@ -46,16 +46,27 @@ const DEFAULTS: SettingsState = {
     workDays: [0, 1, 2, 3, 4],
     dailyMax: 100,
     callDelay: 30,
-    leadflowEnabled: true,
+    leadflowEnabled: false,
     leadflowUrl: "https://leadflow.lueratech.com",
 };
 
-function loadSettings(): SettingsState {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
-    } catch {}
-    return DEFAULTS;
+function dbRowToSettings(row: Record<string, any>): Partial<SettingsState> {
+    return {
+        voice:         row.voice_gender       ?? DEFAULTS.voice,
+        greeting:      row.greeting_message   ?? DEFAULTS.greeting,
+        autoAnswer:    row.auto_answer        ?? DEFAULTS.autoAnswer,
+        recordCalls:   row.call_recording     ?? DEFAULTS.recordCalls,
+        callSummary:   row.call_summary       ?? DEFAULTS.callSummary,
+        notifications: row.notify_realtime    ?? DEFAULTS.notifications,
+        missedAlert:   row.notify_missed      ?? DEFAULTS.missedAlert,
+        hotAlert:      row.notify_hot_lead    ?? DEFAULTS.hotAlert,
+        workHours:     row.work_hours_enabled ?? DEFAULTS.workHours,
+        workStart:     row.work_hours_start   ?? DEFAULTS.workStart,
+        workEnd:       row.work_hours_end     ?? DEFAULTS.workEnd,
+        workDays:      row.work_days          ?? DEFAULTS.workDays,
+        dailyMax:      row.daily_max_calls    ?? DEFAULTS.dailyMax,
+        callDelay:     row.call_delay_secs    ?? DEFAULTS.callDelay,
+    };
 }
 
 type Section = "ai" | "calls" | "notifications" | "hours" | "account" | "integrations";
@@ -70,9 +81,31 @@ const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 );
 
 export const SettingsPage = () => {
+    const { user } = useAuth();
     const [section, setSection] = useState<Section>("ai");
     const [saved, setSaved] = useState(false);
-    const [s, setS] = useState<SettingsState>(loadSettings);
+    const [settingsLoading, setSettingsLoading] = useState(true);
+    const [s, setS] = useState<SettingsState>(DEFAULTS);
+
+    useEffect(() => {
+        if (!user) return;
+        (async () => {
+            try {
+                const { data, error } = await supabase
+                    .from("organization_settings")
+                    .select("*")
+                    .eq("user_id", user.id)
+                    .maybeSingle();
+                // error.code 'PGRST116' = kayıt yok (normal), diğerleri = tablo yok vb.
+                if (data) setS(prev => ({ ...prev, ...dbRowToSettings(data) }));
+                if (error && error.code !== 'PGRST116') {
+                    // Tablo yoksa (migration uygulanmamış) — sessizce default'larla devam et
+                }
+            } finally {
+                setSettingsLoading(false);
+            }
+        })();
+    }, [user]);
 
     // LeadFlow API Key state
     const [lfKey, setLfKey]             = useState<LeadflowConnection | null>(null);
@@ -83,15 +116,26 @@ export const SettingsPage = () => {
     const [lfRevoking, setLfRevoking]     = useState(false);
     const [lfKeyError, setLfKeyError]     = useState<string | null>(null);
 
+    // LeadFlow toggle değişince anında localStorage'a kaydet → sidebar anında güncellenir
     useEffect(() => {
-        if (section === "integrations") {
+        localStorage.setItem("callflow_settings", JSON.stringify({
+            leadflowEnabled: s.leadflowEnabled,
+            leadflowUrl:     s.leadflowUrl,
+        }));
+        window.dispatchEvent(new Event("callflow_settings_updated"));
+    }, [s.leadflowEnabled, s.leadflowUrl]);
+
+    // Entegrasyonlar sekmesi + LeadFlow aktifse key'i çek
+    useEffect(() => {
+        if (section === "integrations" && s.leadflowEnabled) {
             setLfKeyLoading(true);
+            setLfKeyError(null);
             getLeadflowKey()
                 .then(key => setLfKey(key))
                 .catch(() => setLfKeyError("Key bilgisi alınamadı"))
                 .finally(() => setLfKeyLoading(false));
         }
-    }, [section]);
+    }, [section, s.leadflowEnabled]);
 
     const handleGenerateKey = async () => {
         setLfGenerating(true);
@@ -101,7 +145,6 @@ export const SettingsPage = () => {
             setLfKey(key);
             setLfKeyVisible(true);
         } catch (err: any) {
-            console.error("[generateLeadflowKey] Hata:", err);
             setLfKeyError(`Key oluşturulamadı: ${err?.message ?? "bilinmeyen hata"}`);
         } finally {
             setLfGenerating(false);
@@ -140,8 +183,30 @@ export const SettingsPage = () => {
                 : [...prev.workDays, i],
         }));
 
-    const handleSave = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    const handleSave = async () => {
+        if (!user) return;
+        await supabase.from("organization_settings").upsert({
+            user_id:            user.id,
+            voice_gender:       s.voice,
+            greeting_message:   s.greeting,
+            auto_answer:        s.autoAnswer,
+            call_recording:     s.recordCalls,
+            call_summary:       s.callSummary,
+            notify_realtime:    s.notifications,
+            notify_missed:      s.missedAlert,
+            notify_hot_lead:    s.hotAlert,
+            work_hours_enabled: s.workHours,
+            work_hours_start:   s.workStart,
+            work_hours_end:     s.workEnd,
+            work_days:          s.workDays,
+            daily_max_calls:    s.dailyMax,
+            call_delay_secs:    s.callDelay,
+        }, { onConflict: "user_id" });
+        // Sidebar'ın LeadFlow durumunu anında güncellemesi için localStorage'a da yaz
+        localStorage.setItem("callflow_settings", JSON.stringify({
+            leadflowEnabled: s.leadflowEnabled,
+            leadflowUrl:     s.leadflowUrl,
+        }));
         window.dispatchEvent(new Event("callflow_settings_updated"));
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
@@ -378,14 +443,14 @@ export const SettingsPage = () => {
                                         )}
 
                                         {!s.leadflowEnabled && (
-                                            <p className="text-xs text-gray-400">
-                                                Pasif — LeadFlow butonu sidebar'da gizlenir
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Etkinleştirdiğinizde bağlantı anahtarı ve sidebar butonu görünür.
                                             </p>
                                         )}
                                     </div>
 
-                                    {/* LeadFlow API Key Card */}
-                                    <div className="rounded-2xl border-2 border-slate-200 bg-white p-5">
+                                    {/* LeadFlow API Key Card — sadece aktifken göster */}
+                                    {s.leadflowEnabled && <div className="rounded-2xl border-2 border-slate-200 bg-white p-5">
                                         <div className="flex items-center gap-3 mb-4">
                                             <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
                                                 <Key className="w-5 h-5 text-[#CCFF00]" />
@@ -484,7 +549,7 @@ export const SettingsPage = () => {
                                         {lfKeyError && (
                                             <p className="mt-3 text-xs text-red-500 font-medium">{lfKeyError}</p>
                                         )}
-                                    </div>
+                                    </div>}
                                 </div>
                             )}
 
@@ -498,11 +563,11 @@ export const SettingsPage = () => {
                                     <div className="flex items-center gap-4 p-5 rounded-2xl bg-slate-50 border border-slate-200">
                                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold"
                                             style={{ background: "linear-gradient(135deg,#CCFF00,#a3e635)", color: "#1a1a1a" }}>
-                                            G
+                                            {(user?.user_metadata?.full_name ?? user?.email ?? "?")[0].toUpperCase()}
                                         </div>
                                         <div>
-                                            <p className="font-bold text-gray-900">Gökhan</p>
-                                            <p className="text-xs text-gray-500 mt-0.5">gorkem@vmsdigital.com</p>
+                                            <p className="font-bold text-gray-900">{user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "—"}</p>
+                                            <p className="text-xs text-gray-500 mt-0.5">{user?.email}</p>
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#CCFF00]/15 text-[#4d7c0f] border border-[#CCFF00]/30 mt-1">Admin</span>
                                         </div>
                                     </div>

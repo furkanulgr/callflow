@@ -27,7 +27,6 @@ export const startElevenLabsConversation = async (callbacks: ConversationCallbac
                 if (callbacks.onDisconnect) callbacks.onDisconnect();
             },
             onError: (error: string | Error) => {
-                console.error("ElevenLabs Session Error:", error);
                 if (callbacks.onError) callbacks.onError(typeof error === "string" ? error : error.message);
             },
             onModeChange: (info: { mode: string }) => {
@@ -44,7 +43,6 @@ export const startElevenLabsConversation = async (callbacks: ConversationCallbac
 
         return conversation;
     } catch (error: any) {
-        console.error("Failed to start ElevenLabs session:", error);
         if (callbacks.onError) {
             callbacks.onError(error?.message || "Mikrofon izni reddedildi veya bağlantı hatası.");
         }

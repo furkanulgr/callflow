@@ -655,11 +655,10 @@ const LiveTestModal = ({ onClose }: { onClose: () => void }) => {
                         setIsAiSpeaking(false);
                         conversationRef.current = null;
                     },
-                    onError: (err) => {
-                        console.error(err);
+                    onError: (errMsg) => {
                         setIsCalling(false);
                         setStatus("ended");
-                        alert("Hata: " + err);
+                        alert("Hata: " + errMsg);
                     },
                     onModeChange: (info) => {
                         setIsAiSpeaking(info.mode === "speaking");

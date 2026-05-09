@@ -7,6 +7,9 @@ import {
     ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { OnboardingWizard } from "@/components/OnboardingWizard";
 
 /* ── Nav items ────────────────────────────────────────────── */
 const navItems = [
@@ -26,19 +29,53 @@ const getLeadflowSettings = () => {
         if (raw) {
             const parsed = JSON.parse(raw);
             return {
-                enabled: parsed.leadflowEnabled !== false,
+                enabled: parsed.leadflowEnabled === true,   // sadece açıkça true ise göster
                 url: parsed.leadflowUrl || "https://leadflow.lueratech.com",
             };
         }
     } catch {}
-    return { enabled: true, url: "https://leadflow.lueratech.com" };
+    return { enabled: false, url: "https://leadflow.lueratech.com" };  // default: kapalı
 };
 
 export const Layout = () => {
+    const { user } = useAuth();
     const [collapsed, setCollapsed]   = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [leadflow, setLeadflow]     = useState(getLeadflowSettings);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const location = useLocation();
+
+    // Onboarding kontrolü — ilk giriş yapan kullanıcılar için
+    useEffect(() => {
+        if (!user) return;
+
+        // Önce localStorage'a bak — DB olmasa bile tekrar açılmasın
+        const lsKey = `callflow_onboarding_done_${user.id}`;
+        if (localStorage.getItem(lsKey) === "true") return;
+
+        supabase
+            .from("organization_settings")
+            .select("onboarding_completed")
+            .eq("user_id", user.id)
+            .maybeSingle()
+            .then(({ data, error }) => {
+                if (error) {
+                    // Tablo henüz yok (migration uygulanmamış) —
+                    // localStorage'a "done" yaz ki her sayfada 404 spam yapmasın.
+                    // Onboarding wizard'ı gösterme, migration sonrası düzelir.
+                    localStorage.setItem(lsKey, "true");
+                    return;
+                }
+                if (!data || !data.onboarding_completed) {
+                    setShowOnboarding(true);
+                } else {
+                    localStorage.setItem(lsKey, "true");
+                }
+            });
+    }, [user]);
+
+    const displayName = user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "—";
+    const avatarLetter = displayName[0].toUpperCase();
 
     useEffect(() => {
         const onStorage = () => setLeadflow(getLeadflowSettings());
@@ -193,12 +230,12 @@ export const Layout = () => {
                         collapsed && !mobileOpen ? "justify-center" : ""
                     )}>
                         <div className="w-10 h-10 rounded-full bg-[#CCFF00] flex items-center justify-center shadow-md flex-shrink-0">
-                            <span className="font-bold text-gray-900 text-sm">G</span>
+                            <span className="font-bold text-gray-900 text-sm">{avatarLetter}</span>
                         </div>
                         {(!collapsed || mobileOpen) && (
                             <>
                                 <div className="flex-1 text-left">
-                                    <p className="text-sm font-semibold text-gray-900">Gökhan</p>
+                                    <p className="text-sm font-semibold text-gray-900">{displayName}</p>
                                     <p className="text-xs text-gray-500 flex items-center gap-1">
                                         <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                         Premium
@@ -222,6 +259,18 @@ export const Layout = () => {
             )}>
                 <Outlet />
             </main>
+
+            {/* Onboarding Sihirbazı — ilk giriş */}
+            {showOnboarding && user && (
+                <OnboardingWizard
+                    userId={user.id}
+                    onComplete={() => {
+                        // localStorage'a kaydet — sayfa yenilenince tekrar açılmasın
+                        localStorage.setItem(`callflow_onboarding_done_${user.id}`, "true");
+                        setShowOnboarding(false);
+                    }}
+                />
+            )}
         </div>
     );
 };

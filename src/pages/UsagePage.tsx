@@ -255,9 +255,9 @@ export const UsagePage = () => {
                                             <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
                                             <Tooltip
                                                 contentStyle={{ border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 12 }}
-                                                formatter={(value: any, name: string) => {
+                                                formatter={(value: any, name: string | undefined) => {
                                                     if (name === "chars") return [`${formatNumber(value)} karakter`, "Kullanım"];
-                                                    return [value, name];
+                                                    return [value, name ?? ""];
                                                 }}
                                             />
                                             <Area type="monotone" dataKey="chars" stroke="#84cc16" strokeWidth={2} fill="url(#chars)" />
