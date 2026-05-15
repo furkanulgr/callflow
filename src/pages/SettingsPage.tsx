@@ -9,6 +9,11 @@ import {
     getLeadflowKey, generateLeadflowKey, revokeLeadflowKey,
     LeadflowConnection,
 } from "@/services/leadflowApi";
+import {
+    getTimeflowKey, generateTimeflowKey, revokeTimeflowKey,
+    getTimeflowIncomingKey, saveTimeflowIncomingKey, testTimeflowConnection,
+    TimeflowConnection,
+} from "@/services/timeflowApi";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -85,6 +90,7 @@ export const SettingsPage = () => {
     const [section, setSection] = useState<Section>("ai");
     const [saved, setSaved] = useState(false);
     const [settingsLoading, setSettingsLoading] = useState(true);
+    const [settingsError, setSettingsError] = useState<string | null>(null);
     const [s, setS] = useState<SettingsState>(DEFAULTS);
 
     useEffect(() => {
@@ -99,13 +105,28 @@ export const SettingsPage = () => {
                 // error.code 'PGRST116' = kayıt yok (normal), diğerleri = tablo yok vb.
                 if (data) setS(prev => ({ ...prev, ...dbRowToSettings(data) }));
                 if (error && error.code !== 'PGRST116') {
-                    // Tablo yoksa (migration uygulanmamış) — sessizce default'larla devam et
+                    setSettingsError("Ayarlar yüklenemedi. Lütfen sayfayı yenileyin.");
                 }
             } finally {
                 setSettingsLoading(false);
             }
         })();
     }, [user]);
+
+    // TimeFlow API Key state
+    const [tfKey, setTfKey]               = useState<TimeflowConnection | null>(null);
+    const [tfKeyLoading, setTfKeyLoading] = useState(false);
+    const [tfKeyVisible, setTfKeyVisible] = useState(false);
+    const [tfKeyCopied, setTfKeyCopied]   = useState(false);
+    const [tfGenerating, setTfGenerating] = useState(false);
+    const [tfRevoking, setTfRevoking]     = useState(false);
+    const [tfKeyError, setTfKeyError]     = useState<string | null>(null);
+    const [tfIncomingKey, setTfIncomingKey]     = useState('');
+    const [tfIncomingSaved, setTfIncomingSaved] = useState('');
+    const [tfSavingIncoming, setTfSavingIncoming] = useState(false);
+    const [tfTesting, setTfTesting]       = useState(false);
+    const [tfTestResult, setTfTestResult] = useState<boolean | null>(null);
+    const [tfIncomingError, setTfIncomingError] = useState<string | null>(null);
 
     // LeadFlow API Key state
     const [lfKey, setLfKey]             = useState<LeadflowConnection | null>(null);
@@ -125,9 +146,10 @@ export const SettingsPage = () => {
         window.dispatchEvent(new Event("callflow_settings_updated"));
     }, [s.leadflowEnabled, s.leadflowUrl]);
 
-    // Entegrasyonlar sekmesi + LeadFlow aktifse key'i çek
+    // Entegrasyonlar sekmesi açılınca LeadFlow + TimeFlow key'lerini çek
     useEffect(() => {
-        if (section === "integrations" && s.leadflowEnabled) {
+        if (section !== "integrations") return;
+        if (s.leadflowEnabled) {
             setLfKeyLoading(true);
             setLfKeyError(null);
             getLeadflowKey()
@@ -135,6 +157,16 @@ export const SettingsPage = () => {
                 .catch(() => setLfKeyError("Key bilgisi alınamadı"))
                 .finally(() => setLfKeyLoading(false));
         }
+        setTfKeyLoading(true);
+        setTfKeyError(null);
+        Promise.all([getTimeflowKey(), getTimeflowIncomingKey()])
+            .then(([key, incoming]) => {
+                setTfKey(key);
+                setTfIncomingKey(incoming ?? '');
+                setTfIncomingSaved(incoming ?? '');
+            })
+            .catch(() => setTfKeyError("TimeFlow key bilgisi alınamadı"))
+            .finally(() => setTfKeyLoading(false));
     }, [section, s.leadflowEnabled]);
 
     const handleGenerateKey = async () => {
@@ -170,6 +202,65 @@ export const SettingsPage = () => {
         navigator.clipboard.writeText(lfKey.api_key);
         setLfKeyCopied(true);
         setTimeout(() => setLfKeyCopied(false), 2000);
+    };
+
+    // TimeFlow handlers
+    const handleTfGenerateKey = async () => {
+        setTfGenerating(true);
+        setTfKeyError(null);
+        try {
+            const key = await generateTimeflowKey();
+            setTfKey(key);
+            setTfKeyVisible(true);
+        } catch (e: any) {
+            setTfKeyError(`Key oluşturulamadı: ${e?.message ?? 'bilinmeyen hata'}`);
+        } finally {
+            setTfGenerating(false);
+        }
+    };
+
+    const handleTfRevokeKey = async () => {
+        if (!confirm("TimeFlow API key'ini iptal etmek istediğinizden emin misiniz?")) return;
+        setTfRevoking(true);
+        try {
+            await revokeTimeflowKey();
+            setTfKey(null);
+            setTfKeyVisible(false);
+        } catch {
+            setTfKeyError("Key iptal edilemedi.");
+        } finally {
+            setTfRevoking(false);
+        }
+    };
+
+    const handleTfCopyKey = () => {
+        if (!tfKey?.api_key) return;
+        navigator.clipboard.writeText(tfKey.api_key);
+        setTfKeyCopied(true);
+        setTimeout(() => setTfKeyCopied(false), 2000);
+    };
+
+    const handleTfSaveIncoming = async () => {
+        setTfSavingIncoming(true);
+        setTfIncomingError(null);
+        setTfTestResult(null);
+        try {
+            await saveTimeflowIncomingKey(tfIncomingKey);
+            setTfIncomingSaved(tfIncomingKey);
+        } catch {
+            setTfIncomingError("Key kaydedilemedi.");
+        } finally {
+            setTfSavingIncoming(false);
+        }
+    };
+
+    const handleTfTest = async () => {
+        if (!tfIncomingKey) return;
+        setTfTesting(true);
+        setTfTestResult(null);
+        const ok = await testTimeflowConnection(tfIncomingKey);
+        setTfTestResult(ok);
+        setTfTesting(false);
     };
 
     const set = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) =>
@@ -235,6 +326,12 @@ export const SettingsPage = () => {
         </div>
     );
 
+    if (settingsLoading) return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50/50">
+            <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin" />
+        </div>
+    );
+
     return (
         <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
             <div className="max-w-[1100px] mx-auto space-y-6">
@@ -244,6 +341,12 @@ export const SettingsPage = () => {
                     <h1 className="text-3xl font-bold text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Ayarlar</h1>
                     <p className="text-sm text-gray-500 mt-1">AI asistanı ve sistemi yapılandırın</p>
                 </div>
+
+                {settingsError && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                        <span>⚠️</span> {settingsError}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
@@ -447,6 +550,140 @@ export const SettingsPage = () => {
                                                 Etkinleştirdiğinizde bağlantı anahtarı ve sidebar butonu görünür.
                                             </p>
                                         )}
+                                    </div>
+
+                                    {/* TimeFlow Card */}
+                                    <div className={cn(
+                                        "rounded-2xl border-2 p-5 transition-all",
+                                        tfIncomingSaved ? "border-[#CCFF00]/50 bg-[#CCFF00]/5" : "border-gray-200 bg-gray-50"
+                                    )}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", tfIncomingSaved ? "bg-slate-900" : "bg-gray-200")}>
+                                                    <Clock className={cn("w-5 h-5", tfIncomingSaved ? "text-[#CCFF00]" : "text-gray-400")} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900">LUERA TimeFlow</p>
+                                                    <p className="text-xs text-gray-500">Randevu yönetim sistemi</p>
+                                                </div>
+                                            </div>
+                                            {tfIncomingSaved && (
+                                                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    Bağlı
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* CallFlow API Key — TimeFlow'un kullanacağı */}
+                                        <div className="rounded-xl border border-slate-200 bg-white p-4 mb-3">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Key className="w-4 h-4 text-gray-400" />
+                                                <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">CallFlow API Key</p>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mb-3">
+                                                Bu key'i TimeFlow → Ayarlar → Entegrasyonlar sayfasına gir.
+                                            </p>
+                                            {tfKeyLoading ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                                                </div>
+                                            ) : tfKey ? (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                                        <code className="flex-1 text-xs font-mono text-slate-700 truncate select-all">
+                                                            {tfKeyVisible
+                                                                ? tfKey.api_key
+                                                                : `${tfKey.api_key.slice(0, 8)}${'•'.repeat(24)}${tfKey.api_key.slice(-4)}`}
+                                                        </code>
+                                                        <button
+                                                            onClick={() => setTfKeyVisible(v => !v)}
+                                                            className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-200 transition-colors flex-shrink-0"
+                                                        >
+                                                            {tfKeyVisible ? "Gizle" : "Göster"}
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={handleTfCopyKey}
+                                                            className={cn(
+                                                                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
+                                                                tfKeyCopied ? "bg-emerald-500 text-white" : "bg-slate-900 text-[#CCFF00] hover:bg-slate-700"
+                                                            )}
+                                                        >
+                                                            {tfKeyCopied ? <><CheckCircle2 className="w-4 h-4" /> Kopyalandı</> : <><Copy className="w-4 h-4" /> Kopyala</>}
+                                                        </button>
+                                                        <button
+                                                            onClick={handleTfGenerateKey}
+                                                            disabled={tfGenerating}
+                                                            title="Yeni key üret"
+                                                            className="px-3 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors disabled:opacity-50"
+                                                        >
+                                                            <RefreshCw className={cn("w-4 h-4", tfGenerating && "animate-spin")} />
+                                                        </button>
+                                                        <button
+                                                            onClick={handleTfRevokeKey}
+                                                            disabled={tfRevoking}
+                                                            title="Key'i iptal et"
+                                                            className="px-3 py-2.5 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-400">
+                                                        Oluşturulma: {new Date(tfKey.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={handleTfGenerateKey}
+                                                    disabled={tfGenerating}
+                                                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-[#CCFF00] font-bold text-sm hover:bg-slate-700 transition-colors disabled:opacity-50"
+                                                >
+                                                    {tfGenerating
+                                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Oluşturuluyor...</>
+                                                        : <><Key className="w-4 h-4" /> API Key Oluştur</>}
+                                                </button>
+                                            )}
+                                            {tfKeyError && <p className="mt-2 text-xs text-red-500 font-medium">{tfKeyError}</p>}
+                                        </div>
+
+                                        {/* TimeFlow API Key — TimeFlow'un ürettiği */}
+                                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">TimeFlow API Key</p>
+                                            <p className="text-xs text-gray-500 mb-3">
+                                                TimeFlow → Ayarlar → Entegrasyonlar → CallFlow sayfasından kopyala.
+                                            </p>
+                                            <input
+                                                type="text"
+                                                value={tfIncomingKey}
+                                                onChange={e => { setTfIncomingKey(e.target.value); setTfTestResult(null); }}
+                                                placeholder="TimeFlow API key yapıştır..."
+                                                className="input-base text-sm font-mono"
+                                            />
+                                            <div className="flex gap-2 mt-2">
+                                                <button
+                                                    onClick={handleTfSaveIncoming}
+                                                    disabled={tfSavingIncoming || tfIncomingKey === tfIncomingSaved}
+                                                    className="flex-1 py-2.5 rounded-xl bg-[#CCFF00] text-slate-900 font-bold text-sm hover:bg-[#d4ff33] transition-colors disabled:opacity-40"
+                                                >
+                                                    {tfSavingIncoming ? 'Kaydediliyor...' : 'Kaydet'}
+                                                </button>
+                                                <button
+                                                    onClick={handleTfTest}
+                                                    disabled={tfTesting || !tfIncomingKey}
+                                                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
+                                                >
+                                                    {tfTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test Et'}
+                                                </button>
+                                            </div>
+                                            {tfTestResult !== null && (
+                                                <p className={cn("text-xs mt-2 font-medium", tfTestResult ? "text-emerald-600" : "text-red-500")}>
+                                                    {tfTestResult ? "✓ Bağlantı başarılı" : "✗ Bağlantı kurulamadı — key'i kontrol edin"}
+                                                </p>
+                                            )}
+                                            {tfIncomingError && <p className="mt-2 text-xs text-red-500">{tfIncomingError}</p>}
+                                        </div>
                                     </div>
 
                                     {/* LeadFlow API Key Card — sadece aktifken göster */}
